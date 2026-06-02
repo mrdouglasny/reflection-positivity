@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.Abstract
 
+/-!
 # Concrete RP instances for product lattice measures
 
 Product Gibbs measures with even ferromagnetic nearest-neighbour
@@ -51,8 +55,6 @@ transfer-matrix construction) for free.
 
 **Stub.**
 -/
-
-import ReflectionPositivity.Abstract
 
 namespace MeasureTheory.Measure
 

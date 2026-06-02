@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.Graph.ConnectionMatrix
 
+/-!
 # Graph homomorphism functions `f_H(G) := hom(G, H)`
 
 For a weighted graph `H = (a, B)` (positive node weights
@@ -44,8 +48,6 @@ a homomorphism function `f_H` for some weighted `H`.
 **Stub.** Parallel deliverable; lower priority than the critical-path
 OS files.
 -/
-
-import ReflectionPositivity.Graph.ConnectionMatrix
 
 namespace Graph
 

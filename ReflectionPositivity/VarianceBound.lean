@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.TransferMatrix
 
+/-!
 # Variance bound from transfer-matrix mass gap — Layer B2 deliverable
 
 For an RP measure with a positive transfer-matrix mass-gap operator-
@@ -64,8 +68,6 @@ will discharge once Phase 1 lands. The pphi2-side adapter
 
 **Stub.**
 -/
-
-import ReflectionPositivity.TransferMatrix
 
 namespace MeasureTheory.Measure
 

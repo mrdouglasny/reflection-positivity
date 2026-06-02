@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.CauchySchwarz
 
+/-!
 # Transfer matrix construction on the physical Hilbert space
 
 For a reflection-positive measure `μ` with a time-translation symmetry
@@ -63,8 +67,6 @@ functional-analysis layer. The "spectral" interpretation
 
 **Stub.**
 -/
-
-import ReflectionPositivity.CauchySchwarz
 
 namespace MeasureTheory.Measure
 

@@ -1,7 +1,12 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.LinearAlgebra.Matrix.PosDef
 
+/-!
 # Graph reflection positivity (Freedman-Lovász-Schrijver) — connection matrix
 
 For a graph parameter `f : Graph → ℝ` (multiplicative under disjoint
@@ -65,9 +70,6 @@ construction) into `Abstract.lean`.
 **Stub.** Parallel deliverable; lower priority than the critical-path
 OS files.
 -/
-
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.LinearAlgebra.Matrix.PosDef
 
 namespace Graph
 

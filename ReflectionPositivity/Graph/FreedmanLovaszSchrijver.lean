@@ -1,7 +1,12 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.Graph.HomomorphismFunction
+import ReflectionPositivity.Graph.ConnectionMatrix
 
+/-!
 # Freedman-Lovász-Schrijver main theorem
 
 **The converse direction** of graph reflection positivity: any
@@ -60,9 +65,6 @@ OS track — the shared abstract layer might pay off here).
 **Stub.** Parallel deliverable; lower priority than the critical-path
 OS files.
 -/
-
-import ReflectionPositivity.Graph.HomomorphismFunction
-import ReflectionPositivity.Graph.ConnectionMatrix
 
 namespace Graph
 

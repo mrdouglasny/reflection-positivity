@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Michael R. Douglas
+-/
+import ReflectionPositivity.CauchySchwarz
 
+/-!
 # Chessboard / multiple-reflection estimates (FILS 1978 operator approach)
 
 **Parallel deliverable, NOT on the pphi2 Layer B2 critical path.**
@@ -56,8 +60,6 @@ the formalization (estimated ~800-1500 lines instead of the naive
 **Stub.** Parallel deliverable; lower priority than the critical-path
 OS files.
 -/
-
-import ReflectionPositivity.CauchySchwarz
 
 namespace MeasureTheory.Measure
 

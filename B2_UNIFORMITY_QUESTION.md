@@ -7,6 +7,50 @@ a geometric series, or whether it secretly requires the **uniform-in-`a`**
 (continuum) mass gap — the Fröhlich–Simon–Spencer / Glimm–Jaffe–Spencer
 chessboard input.*
 
+## RESOLUTION (expert vetting, 2026-06-02)
+
+**Position P is correct, *because* `Ls` is fixed.** The proposed
+reconciliation (§4) is confirmed: P and G analyze different thermodynamic
+regimes. FSS/GJS chessboard is required only for the **thermodynamic**
+limit (`Ls→∞`), where φ⁴₂ can undergo symmetry breaking and the gap can
+vanish. On a **fixed** spatial cylinder, the continuum Hamiltonian
+`H(Ls)` has a finite spatial cutoff, hence (compact resolvent difference
+vs the free Hamiltonian on a finite interval) **purely discrete bottom
+spectrum and a strictly positive gap `m > 0`**. By norm-resolvent
+convergence `T_a → e^{−a H(Ls)}` as `a→0`, the lattice gap `m_a → m > 0`,
+so `inf_a m_a > 0` for small `a` — **no chessboard needed**. Literature
+precedent: **Simon, "The P(φ)₂ Euclidean (Quantum) Field Theory" (1974),
+Ch. VI** (finite-volume / cylinder), with lattice→continuum gap
+convergence via Nelson hypercontractivity + resolvent convergence
+(Thm V.15, Ch. VI.V). GRS correlation inequalities control the `a→0`
+bounds at fixed volume; the spectral-gap literature bifurcates only at the
+`Lt, Ls→∞` step (fixed-`Ls` → easy compact-resolvent path; full 2D plane →
+FSS chessboard path).
+
+**The `1/a` cancellation trap (decisive for the formalization).** The
+abstract `susceptibility_le` yields `Σ_{t<Nt} γ^t ≤ 1/(1−γ)` with
+`γ = e^{−m_a a}`, so `1/(1−γ) ≈ 1/(m_a a)` **diverges as `1/a`**. This
+divergence is physically correct (a discrete sum over `Nt` time slices);
+it is the lattice time-measure `a` times the sum that gives the continuum
+`a·Σ ≈ 1/m_a`. Since the **target is a ratio** `Var_int ≤ C·Var_free`, and
+`Var_free` carries the *same* `1/a` lattice-sum divergence
+(`1/(1−e^{−m_free a})`), the `1/a` factors **cancel in the ratio**, leaving
+`C ≈ m_free/m_a`, finite and `a`-uniform (since `m_a → m > 0`). Finiteness
+does **not** require FSS, but it **does** require that B2 forms the
+interacting/free ratio (dividing the two geometric series) **before**
+taking any `sup` over `a` — never evaluating `1/(1−γ)` as a standalone
+magnitude.
+
+**Formalization consequence.** `susceptibility_le` (interacting upper
+bound) is necessary but not sufficient: the discharge must (a) keep
+everything in dimensionless ratio form with the shared `a²` spacetime
+measure as an uninstantiated common factor, and (b) supply a free-side
+*lower* bound `Var_free ≳ 1/(1−γ_free)` — which is free-Gaussian-specific
+(explicit covariance `⟨f,(−Δ_a+m²)⁻¹f⟩`), hence pphi2-side, not abstract.
+The constant is then `C → m_free/m_int` with `m_int` the fixed-`Ls`
+continuum gap. Gap inputs needed: `m_a → m(Ls) > 0` (fixed-`Ls`, via
+compact resolvent), NOT a thermodynamic uniform gap.
+
 ## 1. The precise statement to be discharged
 
 pphi2's Layer-B2 axiom

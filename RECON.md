@@ -101,3 +101,36 @@ plan" are real and proved. `asymMassGap_pos` is the input to
    hyps), then CS via `discrim_le_zero`. No Hilbert-space machinery, no
    spectral theorem — consistent with PLAN recalibration #4.
 4. **No dependency on `graphops-qft`**; lift design only.
+
+## Design note — `physicalHilbertSpace` (next phase, recon 2026-06-01)
+
+The Lp-level construction has a clean shape once the right Mathlib
+pieces are identified:
+
+* **Reflection operator on L²**: `R := Lp.compMeasurePreserving θ hθ`
+  (`Mathlib/MeasureTheory/Function/LpSpace/Basic.lean`). It is an
+  `Lp ℝ 2 μ →+ Lp ℝ 2 μ`, norm-preserving (`isometry_compMeasurePreserving`),
+  with `coeFn_compMeasurePreserving : R g =ᵐ[μ] g ∘ θ`. (Bundled only as
+  `→+`; ℝ-linearity in the scalar holds and is provable from `coeFn`.)
+* **Reflection form as a twisted L² inner product**: on `Lp ℝ 2 μ`,
+  `B(f, g) := ⟪f, R g⟫_{L²}` where `⟪·,·⟫` is the genuine L² inner
+  product (`L2Space.inner_def : ⟪f,g⟫ = ∫ a, f a * g a`, real case).
+  Then `B(f, g) = ∫ f · (g ∘ θ) = reflectionInnerProduct` (a.e. via
+  `coeFn_compMeasurePreserving`). Bilinearity/continuity come for free
+  from the L² inner product + `R` — *no* manual integrability juggling.
+* **Positive-time subspace**: `lpMeas ℝ ℝ mPos 2 μ : Submodule ℝ (Lp ℝ 2 μ)`
+  (`ConditionalExpectation/AEMeasurable.lean`) — already a submodule,
+  `mem ↔ AEStronglyMeasurable[mPos]`. RP ⟹ `0 ≤ B(f,f)` on it.
+* **Kernel + quotient**: `N := {f ∈ lpMeas : B(f,f) = 0}` is a submodule
+  (radical lemma `inner_eq_zero_of_self_eq_zero` ⟹ `B`-orthogonal to all,
+  so closed under `+`/`•`). The quotient `lpMeas ⧸ N` carries the
+  definite form `B`, i.e. an `InnerProductSpace.Core`; its completion
+  (`Analysis/InnerProductSpace/Completion.lean`) is `H_phys`.
+
+**Open design choice to vet before coding** (Gemini/Codex per house
+rules): cleanest route from "PSD form on a submodule" to a genuine
+`InnerProductSpace` — (a) `InnerProductSpace.Core` on the quotient by
+`N`, vs (b) a `SeparationQuotient`-style construction, vs (c) reuse of
+Mathlib's `condexpL2`/projection machinery (which already builds the
+relevant L² geometry). This is the heavy node (~PLAN's 400-700 lines)
+and warrants the design pass before implementation.

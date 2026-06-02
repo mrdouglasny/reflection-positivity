@@ -72,6 +72,11 @@ complement and that `‖T ^ n v‖ ≤ γ ^ n ‖v‖` there — the input
 The construction of such a `T` from a reflection-positive measure on
 `H_phys` (the analytic RP contraction estimate + extension to the
 completion) is the remaining concrete bridge, deferred to a later step.
+A pickup-ready, ordered implementation plan (with the self-adjointness
+lemma `reflectionInnerProduct_comp_left` already in place, and the one
+genuine difficulty — the a-priori contraction bound — isolated as a
+hypothesis) is recorded in `RECON.md` → "Deferred implementation plan
+(option 3)".
 
 ## References
 

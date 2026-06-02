@@ -201,6 +201,44 @@ take boundedness (or the contraction `⟨f∘τ,f∘τ⟩_θ ≤ ⟨f,f⟩_θ`) 
 hypothesis matching what the concrete setting provides, rather than
 deriving it via the convexity bootstrap.
 
+### Deferred implementation plan (option 3, pickup-ready)
+
+Goal: a `def ReflectionSystem.transferOperator (S) (τ data + hyps) :
+GappedTransfer S.physicalHilbertSpace`. Ordered steps (all in a new
+`TransferMatrix` section or file, building on what exists):
+
+1. **Extend the data.** `structure TimeTranslatedSystem extends ReflectionSystem`
+   with: `τ : Ω → Ω`; `τmp : MeasurePreserving τ μ`; `τθ : ∀ x, τ (θ (τ x)) = θ x`;
+   `τPos : ∀ f, AEStronglyMeasurable[mPos] f μ → AEStronglyMeasurable[mPos] (f ∘ τ) μ`
+   (τ keeps positive-time observables positive-time); and the **contraction
+   hypothesis** `contraction : ∀ f, reflectionInnerProduct μ θ (f∘τ) (f∘τ) ≤
+   reflectionInnerProduct μ θ f f` (take as a field — see difficulty above;
+   derivable in the bounded/finite setting). Optionally a separate
+   `gap`-bound field giving `MassGapBound`.
+2. **Densely-defined map on the carrier.** `Tpre : PosObs S →ₗ[ℝ] PosObs S`,
+   `Tpre f := ⟨(f.toLp ∘ τ) lifted back into lpMeas, by τPos⟩`. Linearity
+   from precomposition. (Reuse `Lp.compMeasurePreserving τ` to land in `Lp`,
+   then `τPos` for the `lpMeas` membership.)
+3. **`Tpre` is a `B`-seminorm contraction.** `‖Tpre f‖ ≤ ‖f‖` in the
+   `ofCore` seminorm: `‖Tpre f‖² = reflectionInnerProduct μ θ (f∘τ)(f∘τ) ≤
+   reflectionInnerProduct μ θ f f = ‖f‖²` by the `contraction` field +
+   `inner_reflectionLp`. So `Tpre` is `1`-Lipschitz, hence uniformly
+   continuous.
+4. **Extend to the completion.** `T := UniformSpace.Completion.map Tpre`
+   (or the bounded-linear extension `ContinuousLinearMap.extend`); it is a
+   continuous linear map `H_phys →L[ℝ] H_phys` with `‖T‖ ≤ 1`. Self-adjoint:
+   extend `reflectionInnerProduct_comp_left` to the completion by density
+   (`Completion.denseRange_coe.eq_of_inner_…`, cf. `Reproducing.lean`).
+5. **Vacuum.** `vacuum := Completion.coe [1]` (image of the constant `1`);
+   `T vacuum = vacuum` from `1 ∘ τ = 1`.
+6. **Assemble `GappedTransfer`** from steps 4–5 plus the `gap` field, then
+   `susceptibility_le`/`susceptibility_tsum_le` apply verbatim.
+
+The only non-mechanical input is the `contraction` field of step 1 (the
+a-priori-boundedness difficulty); everything else is wiring of existing
+lemmas (`reflectionInnerProduct_comp_left`, `inner_reflectionLp`,
+`Lp.compMeasurePreserving`) + Mathlib's `Completion` API.
+
 ## One formalization wrinkle (`physicalHilbertSpace`)
 
 **One formalization wrinkle**: `ofCore` installs a `SeminormedAddCommGroup`

@@ -96,4 +96,24 @@ theorem susceptibility_le {v : H} (hv : ⟪G.vacuum, v⟫ = 0) (N : ℕ) :
     _ ≤ (1 - G.gap)⁻¹ * ‖v‖ ^ 2 := mul_le_mul_of_nonneg_right hgeom (sq_nonneg _)
     _ = ‖v‖ ^ 2 / (1 - G.gap) := by ring
 
+/-- The two-point series of a vacuum-orthogonal observable is summable
+(geometric domination). -/
+theorem summable_abs_inner_T_pow {v : H} (hv : ⟪G.vacuum, v⟫ = 0) :
+    Summable (fun n => |⟪v, (G.T ^ n) v⟫|) :=
+  Summable.of_nonneg_of_le (fun _ => abs_nonneg _) (fun n => G.abs_inner_T_pow_le hv n)
+    ((summable_geometric_of_lt_one G.gap_nonneg G.gap_lt_one).mul_right (‖v‖ ^ 2))
+
+/-- **Infinite-volume susceptibility bound.** The full two-point series
+of a vacuum-orthogonal observable is bounded by `‖v‖² / (1 - gap)` — the
+`L_t → ∞` limit of `susceptibility_le`. -/
+theorem susceptibility_tsum_le {v : H} (hv : ⟪G.vacuum, v⟫ = 0) :
+    ∑' n, |⟪v, (G.T ^ n) v⟫| ≤ ‖v‖ ^ 2 / (1 - G.gap) := by
+  calc ∑' n, |⟪v, (G.T ^ n) v⟫|
+      ≤ ∑' n, G.gap ^ n * ‖v‖ ^ 2 :=
+        (G.summable_abs_inner_T_pow hv).tsum_le_tsum (fun n => G.abs_inner_T_pow_le hv n)
+          ((summable_geometric_of_lt_one G.gap_nonneg G.gap_lt_one).mul_right (‖v‖ ^ 2))
+    _ = (∑' n, G.gap ^ n) * ‖v‖ ^ 2 := by rw [tsum_mul_right]
+    _ = (1 - G.gap)⁻¹ * ‖v‖ ^ 2 := by rw [tsum_geometric_of_lt_one G.gap_nonneg G.gap_lt_one]
+    _ = ‖v‖ ^ 2 / (1 - G.gap) := by ring
+
 end ReflectionPositivity.GappedTransfer

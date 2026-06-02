@@ -58,18 +58,105 @@ functional-analysis layer. The "spectral" interpretation
 (`λ₁ ≤ e^{-ma}`) is recovered when needed but not required for
 `VarianceBound.lean`.
 
+## This file: the abstract operator core
+
+We first develop the **operator-theoretic core** that the Layer B2
+variance bound rests on, independent of the measure-theoretic
+construction: a `GappedTransfer` — a self-adjoint contraction `T` on a
+real inner product space fixing a vacuum vector, with an operator-norm
+gap `‖T v‖ ≤ γ ‖v‖` (`γ < 1`) on the orthogonal complement of the
+vacuum. From the gap we derive that `T` preserves the vacuum-orthogonal
+complement and that `‖T ^ n v‖ ≤ γ ^ n ‖v‖` there — the input
+`VarianceBound.lean` turns into a uniform susceptibility bound.
+
+The construction of such a `T` from a reflection-positive measure on
+`H_phys` (the analytic RP contraction estimate + extension to the
+completion) is the remaining concrete bridge, deferred to a later step.
+
 ## References
 
 * Glimm-Jaffe Ch. 6 (lattice transfer matrix from RP).
 * Reed-Simon Vol. II §X.4 (positive operators).
-
-## Status
-
-**Stub.**
 -/
 
-namespace MeasureTheory.Measure
+namespace ReflectionPositivity
 
--- (definitions to be added)
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
-end MeasureTheory.Measure
+local notation "⟪" x ", " y "⟫" => @inner ℝ _ _ x y
+
+/-- A **gapped transfer operator** on a real inner product space `H`:
+a continuous self-adjoint operator `T` fixing a distinguished `vacuum`
+vector, together with a spectral-gap bound `‖T v‖ ≤ gap · ‖v‖` with
+`gap < 1` on the orthogonal complement of the vacuum.
+
+This is the operator-theoretic packaging of "transfer matrix with a
+mass gap": `gap = e^{-m·a}` where `m > 0` is the mass and `a` the time
+step. The `norm_le_of_orthogonal` field is the `MassGapBound`. -/
+structure GappedTransfer (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] where
+  /-- The transfer operator. -/
+  T : H →L[ℝ] H
+  /-- The vacuum vector (top eigenvector, eigenvalue `1`). -/
+  vacuum : H
+  /-- `T` is symmetric. -/
+  selfAdjoint : ∀ x y, ⟪T x, y⟫ = ⟪x, T y⟫
+  /-- The vacuum is `T`-invariant. -/
+  vacuum_eq : T vacuum = vacuum
+  /-- The spectral gap parameter `gap = e^{-m·a}`. -/
+  gap : ℝ
+  /-- The gap is nonnegative. -/
+  gap_nonneg : 0 ≤ gap
+  /-- The gap is a strict contraction factor. -/
+  gap_lt_one : gap < 1
+  /-- **Mass-gap bound**: `T` contracts by `gap` on the vacuum-orthogonal
+  complement. -/
+  norm_le_of_orthogonal : ∀ v, ⟪vacuum, v⟫ = 0 → ‖T v‖ ≤ gap * ‖v‖
+
+namespace GappedTransfer
+
+variable (G : GappedTransfer H)
+
+/-- `T` preserves the orthogonal complement of the vacuum. -/
+theorem inner_vacuum_T_eq_zero {v : H} (hv : ⟪G.vacuum, v⟫ = 0) :
+    ⟪G.vacuum, G.T v⟫ = 0 := by
+  have h := G.selfAdjoint G.vacuum v
+  rw [G.vacuum_eq] at h
+  rw [← h]; exact hv
+
+/-- Iterates of `T` stay in the vacuum-orthogonal complement. -/
+theorem inner_vacuum_T_pow_eq_zero {v : H} (hv : ⟪G.vacuum, v⟫ = 0) (n : ℕ) :
+    ⟪G.vacuum, (G.T ^ n) v⟫ = 0 := by
+  induction n with
+  | zero => simpa using hv
+  | succ n ih =>
+    rw [pow_succ']
+    exact G.inner_vacuum_T_eq_zero ih
+
+/-- **Iterated contraction bound**: on the vacuum-orthogonal complement,
+`‖T ^ n v‖ ≤ gap ^ n · ‖v‖`. -/
+theorem norm_T_pow_le {v : H} (hv : ⟪G.vacuum, v⟫ = 0) (n : ℕ) :
+    ‖(G.T ^ n) v‖ ≤ G.gap ^ n * ‖v‖ := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    rw [pow_succ', ContinuousLinearMap.mul_apply]
+    calc ‖G.T ((G.T ^ n) v)‖
+        ≤ G.gap * ‖(G.T ^ n) v‖ :=
+          G.norm_le_of_orthogonal _ (G.inner_vacuum_T_pow_eq_zero hv n)
+      _ ≤ G.gap * (G.gap ^ n * ‖v‖) := by
+          exact mul_le_mul_of_nonneg_left ih G.gap_nonneg
+      _ = G.gap ^ (n + 1) * ‖v‖ := by rw [pow_succ]; ring
+
+/-- The `n`-step two-point function on the vacuum-orthogonal complement
+decays geometrically: `|⟪v, T ^ n v⟫| ≤ gap ^ n · ‖v‖²`. -/
+theorem abs_inner_T_pow_le {v : H} (hv : ⟪G.vacuum, v⟫ = 0) (n : ℕ) :
+    |⟪v, (G.T ^ n) v⟫| ≤ G.gap ^ n * ‖v‖ ^ 2 := by
+  calc |⟪v, (G.T ^ n) v⟫|
+      ≤ ‖v‖ * ‖(G.T ^ n) v‖ := abs_real_inner_le_norm _ _
+    _ ≤ ‖v‖ * (G.gap ^ n * ‖v‖) := by
+        exact mul_le_mul_of_nonneg_left (G.norm_T_pow_le hv n) (norm_nonneg _)
+    _ = G.gap ^ n * ‖v‖ ^ 2 := by ring
+
+end GappedTransfer
+
+end ReflectionPositivity

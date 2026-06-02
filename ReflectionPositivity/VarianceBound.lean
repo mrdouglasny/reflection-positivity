@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael R. Douglas
 -/
 import ReflectionPositivity.TransferMatrix
+import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
 # Variance bound from transfer-matrix mass gap — Layer B2 deliverable
@@ -63,14 +64,36 @@ will discharge once Phase 1 lands. The pphi2-side adapter
   chessboard + spectral theorem; we use the geometric-series shortcut).
 * Reed-Simon Vol. IV §XIII.12 (Schrödinger operators, mass gap →
   exponential decay).
-
-## Status
-
-**Stub.**
 -/
 
-namespace MeasureTheory.Measure
+namespace ReflectionPositivity.GappedTransfer
 
--- (definitions to be added)
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] (G : GappedTransfer H)
 
-end MeasureTheory.Measure
+local notation "⟪" x ", " y "⟫" => @inner ℝ _ _ x y
+
+/-- **Layer B2 deliverable (operator form).** For a vacuum-orthogonal
+observable `v`, the truncated susceptibility `∑_{n < N} |⟪v, T ^ n v⟫|`
+is bounded by `‖v‖² / (1 - gap)`, **uniformly in the truncation `N`**
+(i.e. uniformly in the time-direction volume `L_t`).
+
+This is the geometric-series argument: each term decays as
+`gap ^ n · ‖v‖²` (`abs_inner_T_pow_le`), and `∑_n gap ^ n = (1-gap)⁻¹`.
+No spectral theorem and no chessboard estimate are needed — only the
+operator-norm gap on the vacuum-orthogonal complement. -/
+theorem susceptibility_le {v : H} (hv : ⟪G.vacuum, v⟫ = 0) (N : ℕ) :
+    ∑ n ∈ Finset.range N, |⟪v, (G.T ^ n) v⟫| ≤ ‖v‖ ^ 2 / (1 - G.gap) := by
+  have hgeom : ∑ n ∈ Finset.range N, G.gap ^ n ≤ (1 - G.gap)⁻¹ :=
+    calc ∑ n ∈ Finset.range N, G.gap ^ n
+        ≤ ∑' n : ℕ, G.gap ^ n :=
+          Summable.sum_le_tsum _ (fun i _ => pow_nonneg G.gap_nonneg i)
+            (summable_geometric_of_lt_one G.gap_nonneg G.gap_lt_one)
+      _ = (1 - G.gap)⁻¹ := tsum_geometric_of_lt_one G.gap_nonneg G.gap_lt_one
+  calc ∑ n ∈ Finset.range N, |⟪v, (G.T ^ n) v⟫|
+      ≤ ∑ n ∈ Finset.range N, G.gap ^ n * ‖v‖ ^ 2 :=
+        Finset.sum_le_sum (fun n _ => G.abs_inner_T_pow_le hv n)
+    _ = (∑ n ∈ Finset.range N, G.gap ^ n) * ‖v‖ ^ 2 := by rw [Finset.sum_mul]
+    _ ≤ (1 - G.gap)⁻¹ * ‖v‖ ^ 2 := mul_le_mul_of_nonneg_right hgeom (sq_nonneg _)
+    _ = ‖v‖ ^ 2 / (1 - G.gap) := by ring
+
+end ReflectionPositivity.GappedTransfer

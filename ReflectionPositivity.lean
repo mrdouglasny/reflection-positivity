@@ -3,6 +3,7 @@
 -- OS continuous-track (critical path for pphi2 Layer B2)
 import ReflectionPositivity.Abstract
 import ReflectionPositivity.CauchySchwarz
+import ReflectionPositivity.PhysicalHilbertSpace
 import ReflectionPositivity.TransferMatrix
 import ReflectionPositivity.VarianceBound
 import ReflectionPositivity.LatticeInstance

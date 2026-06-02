@@ -73,6 +73,32 @@ theorem reflectionInnerProduct_comm {μ : Measure Ω} {θ : Ω → Ω}
   rw [key]
   simp_rw [mul_comm]
 
+/-- **Self-adjointness of time translation under the reflection form.**
+If `τ` is a measure-preserving map satisfying the OS commutation relation
+`τ (θ (τ x)) = θ x` (i.e. `θ τ θ = τ⁻¹`, the reflection inverts the
+translation), then translating the first argument equals translating the
+second: `⟨F ∘ τ, G⟩_θ = ⟨F, G ∘ τ⟩_θ`. This is what makes the transfer
+operator `[f] ↦ [f ∘ τ]` self-adjoint on the physical Hilbert space. -/
+theorem reflectionInnerProduct_comp_left {μ : Measure Ω} {θ τ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) (hτ : MeasurePreserving τ μ μ)
+    (hcomm : ∀ x, τ (θ (τ x)) = θ x)
+    {F G : Ω → ℝ} (hF : AEStronglyMeasurable F μ) (hG : AEStronglyMeasurable G μ) :
+    reflectionInnerProduct μ θ (fun x => F (τ x)) G
+      = reflectionInnerProduct μ θ F (fun x => G (τ x)) := by
+  simp only [reflectionInnerProduct_apply]
+  -- rewrite `G (θ x) = G (τ (θ (τ x)))` (by `hcomm`), exposing `φ ∘ τ`
+  have hL : (fun x => F (τ x) * G (θ x))
+      = fun x => (fun y => F y * G (τ (θ y))) (τ x) := by
+    funext x; simp only [hcomm]
+  rw [hL]
+  -- `∫ φ (τ x) ∂μ = ∫ φ ∂μ` by measure preservation
+  have hφ : AEStronglyMeasurable (fun y => F y * G (τ (θ y))) μ :=
+    hF.mul (hG.comp_measurePreserving (hτ.comp hθ))
+  have h := integral_map (φ := τ) (f := fun y => F y * G (τ (θ y)))
+    hτ.measurable.aemeasurable (by rw [hτ.map_eq]; exact hφ)
+  rw [hτ.map_eq] at h
+  exact h.symm
+
 /-- Additivity in the second argument (given integrability of the two
 pieces). -/
 theorem reflectionInnerProduct_add_right {μ : Measure Ω} {θ : Ω → Ω} {F G H : Ω → ℝ}

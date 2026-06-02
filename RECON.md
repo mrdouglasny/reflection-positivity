@@ -239,6 +239,71 @@ a-priori-boundedness difficulty); everything else is wiring of existing
 lemmas (`reflectionInnerProduct_comp_left`, `inner_reflectionLp`,
 `Lp.compMeasurePreserving`) + Mathlib's `Completion` API.
 
+## Op 1: pphi2 Layer-B2 adapter — pickup-ready plan (scoped 2026-06-02)
+
+Target: discharge pphi2's axiom
+`asymInteractingVariance_le_freeVariance_Lt_uniform`
+(`Pphi2/AsymTorus/AsymExpMomentDischarge.lean:190`); Layer C
+(`asymInteracting_expMoment_volume_uniform_proof`) then closes the
+headline axiom. This is a **pphi2-side** effort (lives in pphi2).
+
+**pphi2 inputs available (verified):**
+- `asymTransferOperatorCLM` (`AsymL2Operator.lean:276`) — spatial transfer
+  operator on the `SpatialField Ns` `L²`; `asymTransferOperator_isSelfAdjoint`
+  (292), `_isCompact` (334), `asymTransferWeight_pos` (204).
+- `AsymJentzsch.lean`: `asymTransferOperator_ground_simple` (244),
+  `_ground_simple_spectral` (276), `asymTransferOperator_eigenvalues_pos` (221)
+  — Perron-Frobenius: simple positive top eigenvalue `λ₀` (the vacuum).
+- `asymMassGap` (`AsymPositivity.lean:125`) `= E₁ − E₀`, `asymMassGap_pos` (136);
+  `asymTransferGroundEigenvalue`, `asymTransferFirstExcitedEigenvalue` (23).
+  Eigenvalues `λ_k = e^{−E_k·a}`, so `λ₁/λ₀ = e^{−asymMassGap·a} < 1`.
+
+**Step A — package as `GappedTransfer` (in pphi2, importing this repo).**
+- `H` := the spatial `L²` (domain of `asymTransferOperatorCLM`).
+- `T` := `(1/λ₀) • asymTransferOperatorCLM` (normalise so the **vacuum
+  eigenvalue is 1**, since `GappedTransfer` requires `T vacuum = vacuum`).
+- `vacuum` := the Jentzsch ground eigenvector (`_ground_simple`).
+- `selfAdjoint` := from `_isSelfAdjoint` (scaling preserves it).
+- `gap` := `e^{−asymMassGap·a} = λ₁/λ₀`; `gap_lt_one` from `asymMassGap_pos`.
+- `norm_le_of_orthogonal` (the crux of Step A): `‖T v‖ ≤ (λ₁/λ₀)‖v‖` for
+  `v ⊥ vacuum`. This is **the spectral helper** — for a compact
+  self-adjoint operator, the operator norm restricted to the orthogonal
+  complement of the top eigenvector equals the next eigenvalue. Build it
+  as a reusable lemma `GappedTransfer.ofCompactSelfAdjoint` IN THIS REPO
+  (this is exactly Op-1 sub-option "spectral helper") from Mathlib's
+  compact self-adjoint spectral theorem + `_ground_simple_spectral`.
+
+**Step B — Källén-Lehmann (the bulk; pphi2-internal).** Express the
+interacting variance `∫ (ω f)² dμ_int` as a transfer-matrix time-sum
+`∑_{t=0}^{Nt−1} ⟪v_f, Tᵗ v_f⟫` (connected part; `v_f` = the spatial
+vector of the test function `f`, projected off the vacuum). This is the
+measure↔transfer-matrix dictionary on the cylinder — the substantial
+step, requiring pphi2's `asymTorusInteractingMeasureIso` /
+`latticeGaussianMeasureAsym` structure. Likely already half-present in
+`AsymVarianceBound` / `AsymContinuumLimit`
+(`asymTorusIso_interacting_second_moment_density_transfer`).
+
+**Step C — apply `susceptibility_le`.** Gives
+`∑_{t<Nt} |⟪v_f, Tᵗ v_f⟫| ≤ ‖v_f‖²/(1 − gap)`, **uniformly in `Nt`
+(hence `Lt`)** — the Layer-B2 deliverable. Identify `‖v_f‖²/(1−gap)`
+with `C · Var_free(f)`.
+
+**Uniformity decomposition (CONFIRM WITH OWNER before coding).** The
+axiom wants one `C` uniform in both `Lt` and `a`. `susceptibility_le`
+gives the `Lt`-direction (fixed `gap` ⟹ `1/(1−gap)` independent of the
+number of time steps). The `a`-direction (gap bounded below as `a→0`,
+`Ns→∞`) is the FSS/chessboard regime and is **open even for the square**
+(`spectral_gap_uniform`). The composition closes **iff** Layer B1
+(`AsymVarianceBound`, already a-uniform at fixed `Lt`) owns the
+a-uniformity and B2 only supplies `Lt`-boundedness of `C(Lt,Ls)`. Verify
+this is the intended factorisation; if the single-`C` form needs an
+a-uniform gap, that is a separate (open) input, not suppliable by
+`susceptibility_le`.
+
+Net: Steps A (spectral helper, buildable here) + C are mechanical given
+this library; Step B is the real pphi2-internal work; the uniformity
+decomposition is a math question for the owner.
+
 ## One formalization wrinkle (`physicalHilbertSpace`)
 
 **One formalization wrinkle**: `ofCore` installs a `SeminormedAddCommGroup`

@@ -5,6 +5,7 @@ Authors: Michael R. Douglas
 -/
 import ReflectionPositivity.Abstract
 import Mathlib.Algebra.QuadraticDiscriminant
+import Mathlib.MeasureTheory.Function.L1Space.Integrable
 
 /-!
 # Reflection Cauchy-Schwarz and the physical Hilbert space
@@ -142,5 +143,33 @@ theorem IsReflectionPositive.cauchySchwarz {μ : Measure Ω} {θ : Ω → Ω}
   have hd := discrim_le_zero key
   rw [discrim] at hd
   nlinarith [hd]
+
+/-- For `L²` observables `F, G` and a measure-preserving `θ`, the
+reflection-form integrand `x ↦ F x · G (θ x)` is integrable: `G ∘ θ`
+is again `L²` (measure preservation) and the product of two `L²`
+functions is `L¹` (Hölder, `1/2 + 1/2 = 1`). -/
+theorem integrable_mul_comp {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) {F G : Ω → ℝ}
+    (hF : MemLp F 2 μ) (hG : MemLp G 2 μ) :
+    Integrable (fun x => F x * G (θ x)) μ :=
+  hF.integrable_mul (hG.comp_measurePreserving hθ)
+
+/-- **Reflection Cauchy-Schwarz for `L²` observables.** The `L²`
+membership of `F, G` makes the four product-integrability hypotheses of
+`IsReflectionPositive.cauchySchwarz` automatic (`integrable_mul_comp`),
+so the inequality holds for any `mPos`-measurable `F, G ∈ L²(μ)`. -/
+theorem IsReflectionPositive.cauchySchwarz_memLp {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) (hinv : Function.Involutive θ)
+    {mPos : MeasurableSpace Ω} (hRP : @IsReflectionPositive Ω m0 μ θ mPos) (hm : mPos ≤ m0)
+    {F G : Ω → ℝ} (hF : Measurable[mPos] F) (hG : Measurable[mPos] G)
+    (hFL2 : MemLp F 2 μ) (hGL2 : MemLp G 2 μ) :
+    (@reflectionInnerProduct Ω m0 μ θ F G) ^ 2
+      ≤ @reflectionInnerProduct Ω m0 μ θ F F * @reflectionInnerProduct Ω m0 μ θ G G :=
+  -- fully `@`-pinned: with `mPos` in scope it would otherwise shadow `m0`.
+  @IsReflectionPositive.cauchySchwarz Ω m0 μ θ hθ hinv mPos hRP hm F G hF hG
+    (@integrable_mul_comp Ω m0 μ θ hθ F F hFL2 hFL2)
+    (@integrable_mul_comp Ω m0 μ θ hθ F G hFL2 hGL2)
+    (@integrable_mul_comp Ω m0 μ θ hθ G F hGL2 hFL2)
+    (@integrable_mul_comp Ω m0 μ θ hθ G G hGL2 hGL2)
 
 end MeasureTheory.Measure

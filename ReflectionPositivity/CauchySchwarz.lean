@@ -72,6 +72,21 @@ theorem inner_mul_self_le_of_posSemidef {V : Type*} [AddCommGroup V] [Module ℝ
   rw [discrim] at hd
   nlinarith [hd]
 
+/-- **The radical of a symmetric PSD bilinear form.** If `B u u = 0`
+then `B u v = 0` for every `v` — a degenerate vector pairs to zero with
+everything. Immediate from Cauchy-Schwarz: `(B u v)² ≤ B u u · B v v = 0`.
+
+This is why the null set `{u : B u u = 0}` is a *subspace* and why the
+reflection form descends to a genuine inner product on the quotient. -/
+theorem inner_eq_zero_of_self_eq_zero {V : Type*} [AddCommGroup V] [Module ℝ V]
+    (B : V →ₗ[ℝ] V →ₗ[ℝ] ℝ) (hsymm : ∀ u v, B u v = B v u)
+    (hpos : ∀ u, 0 ≤ B u u) {u : V} (hu : B u u = 0) (v : V) :
+    B u v = 0 := by
+  have h := inner_mul_self_le_of_posSemidef B hsymm hpos u v
+  rw [hu, zero_mul] at h
+  have hsq : (B u v) ^ 2 = 0 := le_antisymm h (sq_nonneg _)
+  exact pow_eq_zero_iff (by norm_num) |>.mp hsq
+
 namespace MeasureTheory.Measure
 
 variable {Ω : Type*} [m0 : MeasurableSpace Ω]
@@ -171,5 +186,24 @@ theorem IsReflectionPositive.cauchySchwarz_memLp {μ : Measure Ω} {θ : Ω → 
     (@integrable_mul_comp Ω m0 μ θ hθ F G hFL2 hGL2)
     (@integrable_mul_comp Ω m0 μ θ hθ G F hGL2 hFL2)
     (@integrable_mul_comp Ω m0 μ θ hθ G G hGL2 hGL2)
+
+/-- **A null vector of the reflection form pairs to zero with every
+other `L²` observable.** If `⟨F, F⟩_θ = 0` then `⟨F, G⟩_θ = 0` for all
+`mPos`-measurable `G ∈ L²(μ)`. This is the measure-theoretic radical
+lemma: the null set is closed under the form, the seed of the kernel
+submodule and the quotient inner product (`physicalHilbertSpace`). -/
+theorem IsReflectionPositive.reflectionInnerProduct_eq_zero_of_self_eq_zero
+    {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) (hinv : Function.Involutive θ)
+    {mPos : MeasurableSpace Ω} (hRP : @IsReflectionPositive Ω m0 μ θ mPos) (hm : mPos ≤ m0)
+    {F G : Ω → ℝ} (hF : Measurable[mPos] F) (hG : Measurable[mPos] G)
+    (hFL2 : MemLp F 2 μ) (hGL2 : MemLp G 2 μ)
+    (hFF : @reflectionInnerProduct Ω m0 μ θ F F = 0) :
+    @reflectionInnerProduct Ω m0 μ θ F G = 0 := by
+  have h := @IsReflectionPositive.cauchySchwarz_memLp Ω m0 μ θ hθ hinv mPos hRP hm
+    F G hF hG hFL2 hGL2
+  rw [hFF, zero_mul] at h
+  have hsq : (@reflectionInnerProduct Ω m0 μ θ F G) ^ 2 = 0 := le_antisymm h (sq_nonneg _)
+  exact pow_eq_zero_iff (by norm_num) |>.mp hsq
 
 end MeasureTheory.Measure

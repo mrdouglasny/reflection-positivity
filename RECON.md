@@ -127,7 +127,7 @@ pieces are identified:
   definite form `B`, i.e. an `InnerProductSpace.Core`; its completion
   (`Analysis/InnerProductSpace/Completion.lean`) is `H_phys`.
 
-**RESOLVED route (recon 2026-06-01; Codex corroboration pending).**
+**RESOLVED route (recon 2026-06-01; Codex-corroborated).**
 Mathlib has the *entire* PSD-form → Hilbert-space pipeline prebuilt — no
 bespoke quotient/completion API needed:
 
@@ -148,8 +148,26 @@ bespoke quotient/completion API needed:
 4. `UniformSpace.Completion.innerProductSpace`
    (`InnerProductSpace/Completion.lean:89`): `InnerProductSpace 𝕜 (Completion E)`.
 
-So `H_phys := UniformSpace.Completion (SeparationQuotient V_B)`, where
-`V_B` is `lpMeas mPos` carrying the `ofCore` structure from `B`.
+So `H_phys := UniformSpace.Completion V_B`, where `V_B` is a `Module ℝ`
+carrier for the positive-time observables with the `ofCore` structure
+from `B`. **`Completion` separates *and* completes in one step**
+(`Completion := SeparationQuotient (CauchyFilter ·)`), so no explicit
+`SeparationQuotient V_B` stage is required (use `SeparationQuotient V_B`
+on its own only if the *uncompleted* definite quotient is independently
+wanted).
+
+**Copy-paste template**: `Analysis/InnerProductSpace/Reproducing.lean`
+(~line 218, the RKHS `H₀ K` / `OfKernel` construction) is the exact
+pattern —
+```
+instance : PreInnerProductSpace.Core 𝕜 (H₀ K) where ...
+instance : InnerProductSpace 𝕜 (H₀ K) := .ofCore _
+abbrev OfKernel := UniformSpace.Completion (H₀ K)
+```
+Follow it: define a `Module`-only carrier type for the positive-time
+observables, install the `PreInnerProductSpace.Core` from `B`, `.ofCore`,
+then `Completion`. This sidesteps the competing-norm clash (the carrier
+is fresh, not `lpMeas` with its L² norm) and reuses all prebuilt API.
 
 **Completion IS needed** (corrects the Q1 conjecture above): the relevant
 topology is the `B`-seminorm, which is *strictly weaker* than the ambient

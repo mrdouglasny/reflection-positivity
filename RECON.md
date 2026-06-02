@@ -127,10 +127,38 @@ pieces are identified:
   definite form `B`, i.e. an `InnerProductSpace.Core`; its completion
   (`Analysis/InnerProductSpace/Completion.lean`) is `H_phys`.
 
-**Open design choice to vet before coding** (Gemini/Codex per house
-rules): cleanest route from "PSD form on a submodule" to a genuine
-`InnerProductSpace` — (a) `InnerProductSpace.Core` on the quotient by
-`N`, vs (b) a `SeparationQuotient`-style construction, vs (c) reuse of
-Mathlib's `condexpL2`/projection machinery (which already builds the
-relevant L² geometry). This is the heavy node (~PLAN's 400-700 lines)
-and warrants the design pass before implementation.
+**RESOLVED route (recon 2026-06-01; Codex corroboration pending).**
+Mathlib has the *entire* PSD-form → Hilbert-space pipeline prebuilt — no
+bespoke quotient/completion API needed:
+
+1. `PreInnerProductSpace.Core ℝ ·` (`InnerProductSpace/Defs.lean:136`) is
+   a PSD, **possibly degenerate** inner-product core: fields
+   `conj_inner_symm` (= our symmetry), `re_inner_nonneg` (= RP positivity),
+   `add_left`, `smul_left` (= bilinearity). Build it from `B(f,g)=⟪f,Rg⟫`.
+   (`InnerProductSpace.Core` *adds* `definite`; we do **not** have/need that.)
+2. `InnerProductSpace.ofCore` (`Defs.lean:568`) takes a
+   `PreInnerProductSpace.Core` and yields a *seminormed* inner product
+   space (`SeminormedAddCommGroup` + `InnerProductSpace`) — degeneracy ⇒
+   seminorm, exactly our case.
+3. `SeparationQuotient` (`InnerProductSpace/Completion.lean:43`):
+   `instance : InnerProductSpace 𝕜 (SeparationQuotient E)`. The separation
+   quotient is the quotient by `nullSubmodule` = `{x : ‖x‖ = 0}`
+   (`Normed/Group/NullSubmodule.lean`) = our radical `N`. This produces the
+   genuine *definite* inner product on `V/N`.
+4. `UniformSpace.Completion.innerProductSpace`
+   (`InnerProductSpace/Completion.lean:89`): `InnerProductSpace 𝕜 (Completion E)`.
+
+So `H_phys := UniformSpace.Completion (SeparationQuotient V_B)`, where
+`V_B` is `lpMeas mPos` carrying the `ofCore` structure from `B`.
+
+**Completion IS needed** (corrects the Q1 conjecture above): the relevant
+topology is the `B`-seminorm, which is *strictly weaker* than the ambient
+L²-norm (`B(f,f)=∫f·(f∘θ)` can be ≪ `‖f‖²`). `N` is L²-closed but `V` need
+not be complete in the `B`-seminorm, so the abstract completion is real.
+
+**One formalization wrinkle**: `ofCore` installs a `SeminormedAddCommGroup`
+on the carrier, but `lpMeas` already carries the L² `NormedAddCommGroup`.
+To avoid the competing-instance clash, build the core on a type *synonym*
+(or plain module wrapper) of `V` that carries only the `Module ℝ`
+structure — the standard Mathlib `ofCore` usage pattern (`letI`/local
+instances). This is the main subtlety; the rest is assembling prebuilt API.

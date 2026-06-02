@@ -1,0 +1,17 @@
+name = "reflection-positivity"
+version = "0.1.0"
+keywords = ["math", "measure-theory", "reflection-positivity", "chessboard", "osterwalder-schrader", "constructive-qft"]
+defaultTargets = ["ReflectionPositivity"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "master"
+
+[[lean_lib]]
+name = "ReflectionPositivity"

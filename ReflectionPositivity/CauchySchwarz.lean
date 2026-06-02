@@ -119,7 +119,8 @@ theorem IsReflectionPositive.cauchySchwarz {μ : Measure Ω} {θ : Ω → Ω}
   have hGm : @Measurable Ω ℝ m0 _ G := hG.mono hm le_rfl
   have hsymmGF : (∫ x, G x * F (θ x) ∂μ) = ∫ x, F x * G (θ x) ∂μ := by
     simpa only [reflectionInnerProduct_apply]
-      using @reflectionInnerProduct_comm Ω m0 μ θ hθ hinv G F hGm hFm
+      using @reflectionInnerProduct_comm Ω m0 μ θ hθ hinv G F
+        hGm.aestronglyMeasurable hFm.aestronglyMeasurable
   have key : ∀ t : ℝ,
       0 ≤ (@reflectionInnerProduct Ω m0 μ θ G G) * (t * t)
         + (-(2 * @reflectionInnerProduct Ω m0 μ θ F G)) * t
@@ -233,5 +234,47 @@ theorem inner_reflectionLp {μ : Measure Ω} {θ : Ω → Ω}
   refine integral_congr_ae ?_
   filter_upwards [Lp.coeFn_compMeasurePreserving g hθ] with a ha
   rw [ha, Function.comp_apply, mul_comm]
+
+open scoped RealInnerProductSpace in
+/-- **Symmetry of the reflection form on `L²`.** For a measure-preserving
+involution `θ`, `⟪f, R g⟫ = ⟪g, R f⟫`. (Equivalently, `R` is self-adjoint.)
+This is the `conj_inner_symm` field of the `PreInnerProductSpace.Core`
+of `H_phys` (real case: `conj` is trivial). -/
+theorem inner_reflectionLp_comm {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) (hinv : Function.Involutive θ) (f g : Lp ℝ 2 μ) :
+    ⟪f, reflectionLp hθ g⟫ = ⟪g, reflectionLp hθ f⟫ := by
+  rw [inner_reflectionLp hθ f g, inner_reflectionLp hθ g f]
+  exact reflectionInnerProduct_comm hθ hinv (Lp.aestronglyMeasurable f) (Lp.aestronglyMeasurable g)
+
+/-- **Positivity of the reflection form on positive-time observables.**
+If the `L²` class `f` has an `mPos`-measurable representative (i.e.
+`f ∈ lpMeas mPos`), then `0 ≤ ∫ f·(f∘θ) dμ`. Reflection positivity is
+stated for `mPos`-measurable functions, so we transport it along the
+a.e.-equal representative `hf.mk f`. Combined with `inner_reflectionLp`
+this is the `re_inner_nonneg` field of the `PreInnerProductSpace.Core`
+of `H_phys`. (Stated via the integral form rather than `⟪f, R f⟫` so the
+loose `mPos` cannot shadow the `L²` inner-product instance.) -/
+theorem reflectionInnerProduct_self_nonneg {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) {mPos : MeasurableSpace Ω}
+    (hRP : @IsReflectionPositive Ω m0 μ θ mPos) (f : Lp ℝ 2 μ)
+    (hf : AEStronglyMeasurable[mPos] (⇑f) μ) :
+    0 ≤ ∫ x, (⇑f) x * (⇑f) (θ x) ∂μ := by
+  -- make the ground σ-algebra `m0` the most-recent local instance so TC
+  -- prefers it over the loose `mPos` (they are defeq, so no mismatch).
+  letI : MeasurableSpace Ω := m0
+  set f' := hf.mk (⇑f) with hf'eq
+  have hf'meas : Measurable[mPos] f' := hf.stronglyMeasurable_mk.measurable
+  have haef : (⇑f) =ᵐ[μ] f' := hf.ae_eq_mk
+  -- no `MemLp f' 2 μ` type annotation: it would let the loose `mPos` shadow `m0`
+  have hf'L2 := (Lp.memLp f).ae_eq haef
+  -- replace the `L²` representatives by the `mPos`-measurable `f'`
+  have hcomp : (⇑f) ∘ θ =ᵐ[μ] f' ∘ θ := hθ.quasiMeasurePreserving.ae_eq_comp haef
+  have hintegrand : (fun x => (⇑f) x * (⇑f) (θ x)) =ᵐ[μ] fun x => f' x * f' (θ x) := by
+    filter_upwards [haef, hcomp] with x hx hcx
+    simp only [Function.comp_apply] at hcx
+    rw [hx, hcx]
+  rw [integral_congr_ae hintegrand]
+  have hpos := hRP f' hf'meas (@integrable_mul_comp Ω m0 μ θ hθ f' f' hf'L2 hf'L2)
+  simpa only [reflectionInnerProduct_apply] using hpos
 
 end MeasureTheory.Measure

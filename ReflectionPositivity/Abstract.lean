@@ -57,12 +57,12 @@ measure preservation) followed by `θ (θ x) = x` swaps the roles of the
 two arguments. -/
 theorem reflectionInnerProduct_comm {μ : Measure Ω} {θ : Ω → Ω}
     (hθ : MeasurePreserving θ μ μ) (hinv : Function.Involutive θ)
-    {F G : Ω → ℝ} (hF : Measurable F) (hG : Measurable G) :
+    {F G : Ω → ℝ} (hF : AEStronglyMeasurable F μ) (hG : AEStronglyMeasurable G μ) :
     reflectionInnerProduct μ θ F G = reflectionInnerProduct μ θ G F := by
   simp only [reflectionInnerProduct_apply]
   -- Substitute x ↦ θ x in the RHS via measure preservation.
   have hg : AEStronglyMeasurable (fun x => G x * F (θ x)) μ :=
-    (hG.mul (hF.comp hθ.measurable)).aestronglyMeasurable
+    hG.mul (hF.comp_measurePreserving hθ)
   have hinv' : ∀ x, θ (θ x) = x := hinv
   have key : ∫ x, G x * F (θ x) ∂μ = ∫ x, G (θ x) * F x ∂μ := by
     have h := integral_map (φ := θ) (f := fun y => G y * F (θ y))

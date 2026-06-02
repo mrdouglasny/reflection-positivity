@@ -174,6 +174,35 @@ topology is the `B`-seminorm, which is *strictly weaker* than the ambient
 L²-norm (`B(f,f)=∫f·(f∘θ)` can be ≪ `‖f‖²`). `N` is L²-closed but `V` need
 not be complete in the `B`-seminorm, so the abstract completion is real.
 
+## The measure→operator bridge (analysis, 2026-06-02)
+
+Constructing a concrete `GappedTransfer` on `H_phys` from a
+reflection-positive measure needs a time translation `τ` with
+`τ ∘ θ ∘ τ = θ` (`θτθ = τ⁻¹`; done: `reflectionInnerProduct_comp_left`
+gives self-adjointness `⟨F∘τ,G⟩_θ = ⟨F,G∘τ⟩_θ`). The transfer operator is
+`[f] ↦ [f∘τ]`. The crux is the **contraction estimate** `‖T‖ ≤ 1`:
+
+- self-adjointness gives `‖Tf‖² = ⟨f, T²f⟩`, and reflection CS gives
+  log-convexity `sₙ² ≤ s_{n-1} s_{n+1}` where `sₙ = ‖Tⁿf‖`;
+- BUT closing the bootstrap to `s₁ ≤ s₀` requires an **a-priori bound**
+  that `T` is bounded (`sₙ ≤ C Rⁿ`). This is the step textbooks hand-wave;
+  it is the real formalization difficulty.
+
+**Reframing for the pphi2 critical path.** The Layer B2 *deliverable* —
+`GappedTransfer.susceptibility_le` (uniform-in-`L_t` variance bound) — is
+DONE and is abstract over any inner product space. For pphi2's cylinder
+(a finite/nice lattice) the transfer matrix is manifestly bounded, so the
+a-priori-boundedness subtlety does not arise: pphi2 can construct its
+concrete `T` and supply it as a `GappedTransfer`, then apply
+`susceptibility_le`. The fully general measure→`T` construction (with the
+a-priori bound) is a library-completeness enhancement, **not strictly on
+pphi2's critical path**. If pursued, the clean Lean route is likely to
+take boundedness (or the contraction `⟨f∘τ,f∘τ⟩_θ ≤ ⟨f,f⟩_θ`) as a
+hypothesis matching what the concrete setting provides, rather than
+deriving it via the convexity bootstrap.
+
+## One formalization wrinkle (`physicalHilbertSpace`)
+
 **One formalization wrinkle**: `ofCore` installs a `SeminormedAddCommGroup`
 on the carrier, but `lpMeas` already carries the L² `NormedAddCommGroup`.
 To avoid the competing-instance clash, build the core on a type *synonym*

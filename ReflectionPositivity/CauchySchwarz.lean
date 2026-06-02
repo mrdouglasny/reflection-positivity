@@ -6,6 +6,7 @@ Authors: Michael R. Douglas
 import ReflectionPositivity.Abstract
 import Mathlib.Algebra.QuadraticDiscriminant
 import Mathlib.MeasureTheory.Function.L1Space.Integrable
+import Mathlib.MeasureTheory.Function.L2Space
 
 /-!
 # Reflection Cauchy-Schwarz and the physical Hilbert space
@@ -205,5 +206,32 @@ theorem IsReflectionPositive.reflectionInnerProduct_eq_zero_of_self_eq_zero
   rw [hFF, zero_mul] at h
   have hsq : (@reflectionInnerProduct Ω m0 μ θ F G) ^ 2 = 0 := le_antisymm h (sq_nonneg _)
   exact pow_eq_zero_iff (by norm_num) |>.mp hsq
+
+/-! ### The reflection form at the `L²` level
+
+To build the physical Hilbert space we lift the reflection form to
+`L²(μ) = Lp ℝ 2 μ`, where it is the L²-inner product twisted by the
+**reflection operator** `R : g ↦ g ∘ θ`. This packages bilinearity and
+continuity for free (from the L² inner product) and is the input to the
+`PreInnerProductSpace.Core`/`Completion` construction of `H_phys`. -/
+
+open scoped RealInnerProductSpace in
+/-- The reflection operator `R : g ↦ g ∘ θ` on `L²(μ)`, as the
+norm-preserving additive map `Lp.compMeasurePreserving`. -/
+noncomputable def reflectionLp {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) : Lp ℝ 2 μ →+ Lp ℝ 2 μ :=
+  Lp.compMeasurePreserving θ hθ
+
+open scoped RealInnerProductSpace in
+/-- **Bridge to the concrete form.** The L²-inner product twisted by the
+reflection operator is the reflection form on representatives:
+`⟪f, R g⟫ = ∫ f · (g ∘ θ) dμ = reflectionInnerProduct μ θ f g`. -/
+theorem inner_reflectionLp {μ : Measure Ω} {θ : Ω → Ω}
+    (hθ : MeasurePreserving θ μ μ) (f g : Lp ℝ 2 μ) :
+    ⟪f, reflectionLp hθ g⟫ = ∫ x, f x * g (θ x) ∂μ := by
+  simp only [reflectionLp, MeasureTheory.L2.inner_def, RCLike.inner_apply, conj_trivial]
+  refine integral_congr_ae ?_
+  filter_upwards [Lp.coeFn_compMeasurePreserving g hθ] with a ha
+  rw [ha, Function.comp_apply, mul_comm]
 
 end MeasureTheory.Measure

@@ -241,6 +241,18 @@ lemmas (`reflectionInnerProduct_comp_left`, `inner_reflectionLp`,
 
 ## Op 1: pphi2 Layer-B2 adapter — pickup-ready plan (scoped 2026-06-02)
 
+**STATUS (2026-06-02): Part A + Step A DONE** on pphi2 branch `b2-spectral-gap`
+(both repos on v4.30.0; pphi2 depends on this repo). `AsymGappedTransfer.lean`
+packages the transfer operator; `AsymSpectralGap.lean` proves the operator-norm
+gap (`asymTransferNormalized_gap`) and gives the hypothesis-free
+`asymGappedTransfer'`, so `GappedTransfer.susceptibility_le` applies to the asym
+cylinder. Prereq fix: exposed Perron-Frobenius dominance (`htop`) in pphi2's
+spectral data (the ground index was under-specified). Remaining: Step B
+(Källén-Lehmann) + the int/free ratio with the `1/a` cancellation + fixed-`Ls`
+gap convergence `m_a → m(Ls)`. (The Step-A spectral bound was built natively in
+pphi2, not as a reusable helper here — pphi2's space is infinite-dim/compact, so
+it used GaussianField's compact-self-adjoint spectral API directly.)
+
 Target: discharge pphi2's axiom
 `asymInteractingVariance_le_freeVariance_Lt_uniform`
 (`Pphi2/AsymTorus/AsymExpMomentDischarge.lean:190`); Layer C

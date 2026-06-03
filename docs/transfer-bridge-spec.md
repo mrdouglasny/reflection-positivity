@@ -137,6 +137,14 @@ structure field, discharged for free in every concrete instance.
    (a unitary identifying `H_phys` with the spatial `L²`, intertwining the two operators).
    Supplies a `GappedTransfer` with `.T = transferOperator` and the PROVED gap
    (`asymGappedTransfer'`), satisfying D3's `hGT`/`hGvac`.
+   **⚠ BLOCKER (Codex 2026-06-03): VERIFY NORMALIZATION FIRST.** This coincidence can
+   only hold if `asymTransferOperatorCLM` actually is the transfer operator of
+   `interactingLatticeMeasureAsym`. Codex found an `a`-power mismatch: the Gibbs
+   interaction is `a²·Σwick` (precision `a²Q`, GJ `aᵈ` convention) but the transfer
+   weight is `exp(−(a/2)·spatialAction)` (→ `a·spatialAction` around the circle, not
+   `a²`). Resolve before building D1+ — likely `exp(−(a²/2)·spatialAction)` is correct;
+   re-check that Part A's gap proof survives the reweight. A 2-slice two-point check
+   settles it. Details: `pphi2/docs/layer-B2-discharge-plan.md` → "Codex review".
 3. Apply `varianceTimeSum_le`; identify the RHS with `C · Var_free` (free covariance,
    `1/a` cancellation per `[[pphi2-b2-adapter-plan]]`); B1 supplies `a`-uniformity.
 

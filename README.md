@@ -87,6 +87,38 @@ The framework has broader downstream uses, formalized or not:
   matrix analysis (modern applications of the multivariate
   Lee-Yang and RP programs).
 
+### The transfer-operator construction (built)
+
+`ReflectionPositivity/TransferConstruction.lean` builds the OS transfer
+operator abstractly and proves the Feynman–Kac / Källén–Lehmann
+dictionary. The key observation: in the GNS framework the transfer
+operator is simply *time translation* `T : [f] ↦ [f∘τ]` on the physical
+Hilbert space, and the Euclidean correlation across `n` time steps **is,
+by construction**, the operator correlation `⟪[f], Tⁿ[g]⟫` — so no
+Gaussian time-slice computation is needed. Four declarations:
+
+* `TimeTranslatedSystem` — a `ReflectionSystem` plus a measure-preserving
+  time translation `τ` with `θτθ = τ⁻¹` (and the contraction
+  `‖[f∘τ]‖ ≤ ‖[f]‖` as a supplied field — the only non-mechanical input,
+  free in any concrete instance).
+* `transferOperator : H_phys →L[ℝ] H_phys` — the extension of `f ↦ f∘τ`
+  to the completion, with `selfAdjoint` (from `θτθ=τ⁻¹`) and a fixed
+  `vacuum = [1]`. (Supplies four of the six `GappedTransfer` fields; the
+  spectral `gap` is supplied at instantiation, e.g. via Perron–Frobenius.)
+* `reflectionCorrelation_eq_inner_T_pow` (the bridge):
+  `⟪[f], Tⁿ[g]⟫ = ∫ f · (g ∘ τ^[n] ∘ θ) dμ`.
+* `reflectionCorrelation_susceptibility_le` (the deliverable): with any
+  gap, `∑_{n<N} |∫ v·(v∘τ^[n]∘θ) dμ| ≤ ‖[v]‖²/(1−gap)`, **uniform in the
+  time extent**.
+
+The construction is abstract — square torus, asymmetric torus, and the
+continuum all instantiate it; a concrete consumer supplies only the
+spectral gap and the operator-coincidence identifying `H_phys` with its
+own transfer matrix. **Full details and an instantiation guide:
+[`docs/transfer-construction.md`](docs/transfer-construction.md)**
+(design rationale and ruled-out alternatives:
+[`docs/transfer-bridge-spec.md`](docs/transfer-bridge-spec.md)).
+
 ### Graph reflection positivity (FLS)
 
 The Freedman-Lovász-Schrijver framework (JAMS 2007) gives a
@@ -127,9 +159,25 @@ mature.
 
 ## Status
 
-**Scoping / planning phase** (2026-06-02). See [PLAN.md](PLAN.md) for
-the proposed file structure and discharge order. No declarations
-proved yet.
+**OS abstract stack complete** (2026-06-03), sorry/axiom-free:
+
+* `Abstract.lean` — the reflection inner product `∫ F·(G∘θ) dμ`, its
+  symmetry, additivity, and translation self-adjointness (`θτθ=τ⁻¹`).
+* `CauchySchwarz.lean` — reflection Cauchy–Schwarz, the `L²` bridge
+  (`reflectionLp`, `inner_reflectionLp`), positivity of the form.
+* `PhysicalHilbertSpace.lean` — `ReflectionSystem`, the pre-inner-product
+  core, and `physicalHilbertSpace = Completion PosObs`.
+* `TransferMatrix.lean` / `VarianceBound.lean` — the `GappedTransfer`
+  structure and the geometric-series susceptibility bound
+  `∑ |⟪v, Tⁿ v⟫| ≤ ‖v‖²/(1−gap)`.
+* `TransferConstruction.lean` — the OS transfer operator + Feynman–Kac
+  bridge + `Lt`-uniform variance bound (see the section above and
+  [`docs/transfer-construction.md`](docs/transfer-construction.md)).
+
+Each headline declaration's `#print axioms` is
+`[propext, Classical.choice, Quot.sound]` only. The graph / FLS
+(`Graph/`) and chessboard (`Chessboard/`) tracks follow the discharge
+order in [PLAN.md](PLAN.md).
 
 ## Why a standalone repo
 

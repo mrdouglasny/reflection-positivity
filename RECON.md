@@ -239,6 +239,62 @@ a-priori-boundedness difficulty); everything else is wiring of existing
 lemmas (`reflectionInnerProduct_comp_left`, `inner_reflectionLp`,
 `Lp.compMeasurePreserving`) + Mathlib's `Completion` API.
 
+## The Feynman–Kac bridge in MAXIMUM GENERALITY (chosen formulation, 2026-06-03)
+
+**Decision (owner, 2026-06-03): build the measure↔transfer-operator correlation
+bridge ABSTRACTLY here, not as a pphi2 lattice Fubini.** The bridge that B2 needs —
+"the interacting variance is a transfer-operator time-sum" — is, in the OS/GNS
+framework, *almost definitional*, and it generalizes over square torus, asym torus,
+AND the continuum. Two candidate general framings; we take (II).
+
+**(I) Positive-kernel / transfer-matrix dictionary.** Data: a measure space `(S, ν)`
+(one time slice) + a symmetric positive kernel `k` (⟹ self-adjoint compact
+positivity-improving operator `T` on `L²(S,ν)`, i.e. a `GappedTransfer`). Output: the
+periodic path measure `dμ_n ∝ ∏_t k(ψ_t,ψ_{t+1}) ∏_t dν` and the trace identity
+`∫ A(ψ_0)B(ψ_t) dμ_n = Tr(M_A Tᵗ M_B T^{n−t})/Tr(Tⁿ)`. General over kernels but
+*assumes* the product/Markov form, and needs explicit Gaussian Fubini + a
+Perron-Frobenius trace-ratio limit. (This is the lattice-specific 4-step design in
+pphi2's `layer-B2-discharge-plan.md`.)
+
+**(II) OS reconstruction / reflection + time-translation — TAKE THIS.** Data: only a
+reflection-positive measure `μ` + a measure-preserving time translation `τ` with
+`θτθ = τ⁻¹` (already the `TimeTranslatedSystem` of the 6-step plan above). The
+transfer operator is `T = [f] ↦ [f∘τ]` on `H_phys`; self-adjointness is already
+proved (`reflectionInnerProduct_comp_left`). **The correlation identity is then
+essentially DEFINITIONAL:**
+
+  `⟪[F], Tⁿ [G]⟫_phys = reflectionInnerProduct μ θ F (G∘τⁿ) = ∫ F · (G∘τⁿ)∘θ dμ`,
+
+i.e. the physical inner product of `T`-powers *is* the Euclidean time-correlation of
+the measure — no Gaussian Fubini, no explicit trace formula. This is the whole point
+of the GNS/OS construction. So in framing (II) the bridge's hard "step 3" (kernel
+composition) and "step 2" (action factorization) **collapse into the definition of
+`H_phys` + a single operator-coincidence lemma** at instantiation time.
+
+**Abstract deliverables to add here (reflection-positivity):**
+1. Finish the `TimeTranslatedSystem.transferOperator : GappedTransfer H_phys`
+   construction (the deferred 6-step plan; take the contraction/boundedness as a
+   structure field — free in every concrete instance).
+2. `reflectionCorrelation_eq_inner_T_pow`: `⟪[F], Tⁿ[G]⟫_phys = reflectionInnerProduct
+   μ θ F (G∘τⁿ)` — the (near-definitional) Euclidean-correlation identity.
+3. `varianceTimeSum_le`: a time-smeared second moment `∑_{t,t'} f̃(t)f̃(t')·(correlation)`
+   `≤ ‖v_f‖²/(1−gap)`, uniform in the number of slices — compose (2) with the existing
+   `susceptibility_le`. This is the abstract B2 deliverable.
+
+**What stays project-specific (pphi2, the only φ⁴₂-specific work):**
+- the lattice measure is reflection-positive (PROVED) and `τ` = time shift;
+- the abstract `H_phys`/`T` **coincide** with pphi2's concrete `L2SpatialField` /
+  `asymTransferOperatorCLM` (an operator-identification lemma — this is where the
+  Codex lattice review's "step 2 covariance factorization" lands, now localized to a
+  single coincidence proof rather than the whole bridge);
+- boundedness is free (Gaussian/finite), discharging the one abstract difficulty.
+
+**Why maximum generality wins here:** (a) right altitude — the dictionary is generic
+OS reconstruction, Mathlib-bound; (b) reused verbatim by square + asym + continuum;
+(c) it *removes* the lattice Gaussian-Fubini and trace-ratio-limit work by making the
+correlation identity definitional; the residual φ⁴₂ content shrinks to one
+operator-coincidence lemma. Relates to / may draw on `markov-semigroups`.
+
 ## Op 1: pphi2 Layer-B2 adapter — pickup-ready plan (scoped 2026-06-02)
 
 **STATUS (2026-06-02): Part A + Step A DONE** on pphi2 branch `b2-spectral-gap`

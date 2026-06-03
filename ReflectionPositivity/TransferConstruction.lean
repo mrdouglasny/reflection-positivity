@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael R. Douglas
 -/
 import ReflectionPositivity.PhysicalHilbertSpace
+import ReflectionPositivity.VarianceBound
 import Mathlib.MeasureTheory.Function.LpSpace.Indicator
 import Mathlib.Topology.Algebra.LinearMapCompletion
 
@@ -272,6 +273,76 @@ theorem transferOperator_vacuum [IsProbabilityMeasure S.μ] :
   rw [S.transferOperator_coe]
   exact congrArg (fun f : S.PosObs => (f : S.physicalHilbertSpace))
     S.transferOperatorPre_vacuumPosObs
+
+/-! ## D2 — the Euclidean-correlation identity (the bridge) -/
+
+/-- Powers of `transferOperator` act on the dense image by powers of
+`transferOperatorPre`. -/
+theorem transferOperator_pow_coe (g : S.PosObs) (n : ℕ) :
+    (S.transferOperator ^ n) (g : S.physicalHilbertSpace)
+      = (((S.transferOperatorPre ^ n) g : S.PosObs) : S.physicalHilbertSpace) := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      rw [pow_succ', ContinuousLinearMap.mul_apply, ih, S.transferOperator_coe,
+        pow_succ', ContinuousLinearMap.mul_apply]
+
+/-- The `L²` representative of `(transferOperatorPre ^ n) g` is `g.toLp ∘ τ^[n]`. -/
+theorem transferOperatorPre_pow_toLp_ae (g : S.PosObs) (n : ℕ) :
+    ((S.transferOperatorPre ^ n) g).toLp =ᵐ[S.μ] fun x => g.toLp (S.τ^[n] x) := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      have hstep : (S.transferOperatorPre ^ (n + 1)) g
+          = S.transferOperatorPre ((S.transferOperatorPre ^ n) g) := by
+        rw [pow_succ', ContinuousLinearMap.mul_apply]
+      rw [hstep]
+      have h1 := S.transferOperatorPre_toLp_ae ((S.transferOperatorPre ^ n) g)
+      have h2 := S.τmp.quasiMeasurePreserving.ae_eq_comp ih
+      filter_upwards [h1, h2] with x hx1 hx2
+      rw [hx1]
+      simp only [Function.comp_apply] at hx2
+      rw [hx2, ← Function.iterate_succ_apply]
+
+/-- **The bridge (D2).** The physical inner product of `transferOperator`-powers is
+the Euclidean (reflection) correlation of the measure: for positive-time observables
+`f, g`, `⟪[f], Tⁿ[g]⟫ = ∫ f · (g ∘ τ^[n] ∘ θ) dμ`. By induction this reduces to the
+defining `transferOperator_coe` identity; it is the abstract Feynman–Kac/Källén–Lehmann
+dictionary, with no Gaussian computation. -/
+theorem reflectionCorrelation_eq_inner_T_pow (f g : S.PosObs) (n : ℕ) :
+    ⟪(f : S.physicalHilbertSpace), (S.transferOperator ^ n) (g : S.physicalHilbertSpace)⟫
+      = reflectionInnerProduct S.μ S.θ f.toLp (fun x => g.toLp (S.τ^[n] x)) := by
+  rw [S.transferOperator_pow_coe, UniformSpace.Completion.inner_coe]
+  change S.toReflectionSystem.innerForm f ((S.transferOperatorPre ^ n) g) = _
+  rw [S.innerForm_eq_reflectionInnerProduct]
+  simp only [reflectionInnerProduct_apply]
+  refine integral_congr_ae ?_
+  have hpow := S.transferOperatorPre_pow_toLp_ae g n
+  have hpowθ := S.mp.quasiMeasurePreserving.ae_eq_comp hpow
+  filter_upwards [hpowθ] with x hx
+  simpa only [Function.comp_apply] using congrArg (fun y => f.toLp x * y) hx
+
+/-! ## D3 — `Lt`-uniform bound on the summed Euclidean correlator -/
+
+/-- **D3.** Given any spectral gap on `transferOperator` (packaged as a `GappedTransfer`
+whose operator is `transferOperator`), the time-summed Euclidean two-point correlator of
+a vacuum-orthogonal positive-time observable is bounded **uniformly in the truncation
+`N`** (hence uniformly in the time extent): `∑_{n<N} |∫ v·(v∘τ^[n]∘θ)| ≤ ‖[v]‖²/(1−gap)`.
+Combines the bridge (D2) with `GappedTransfer.susceptibility_le`. -/
+theorem reflectionCorrelation_susceptibility_le
+    (G : GappedTransfer S.physicalHilbertSpace) (hGT : G.T = S.transferOperator)
+    {v : S.PosObs} (hv : ⟪G.vacuum, (v : S.physicalHilbertSpace)⟫ = 0) (N : ℕ) :
+    ∑ n ∈ Finset.range N,
+        |reflectionInnerProduct S.μ S.θ v.toLp (fun x => v.toLp (S.τ^[n] x))|
+      ≤ ‖(v : S.physicalHilbertSpace)‖ ^ 2 / (1 - G.gap) := by
+  have h : (∑ n ∈ Finset.range N,
+        |reflectionInnerProduct S.μ S.θ v.toLp (fun x => v.toLp (S.τ^[n] x))|)
+      = ∑ n ∈ Finset.range N,
+        |⟪(v : S.physicalHilbertSpace), (G.T ^ n) (v : S.physicalHilbertSpace)⟫| := by
+    refine Finset.sum_congr rfl (fun n _ => ?_)
+    rw [← S.reflectionCorrelation_eq_inner_T_pow v v n, ← hGT]
+  rw [h]
+  exact G.susceptibility_le hv N
 
 end TimeTranslatedSystem
 

@@ -120,9 +120,22 @@ GappedTransfer, susceptibility_le ...................... PROVED (TransferMatrix/
   │
   ├─ D0  TimeTranslatedSystem (structure) ............... ✅ DONE (TransferConstruction.lean, b0e1166)
   ├─ D1  transferOperator + selfAdjoint + vacuum ........ ✅ DONE (b0e1166; verified, axioms clean)
-  ├─ D2  reflectionCorrelation_eq_inner_T_pow .......... TODO (induction; the "bridge")
-  └─ D3  varianceTimeSum_le ............................. TODO (D2 + susceptibility_le)
+  ├─ D2  reflectionCorrelation_eq_inner_T_pow .......... ✅ DONE (62d98ce; the "bridge")
+  └─ D3  reflectionCorrelation_susceptibility_le ....... ✅ DONE (62d98ce; D2 + susceptibility_le)
 ```
+
+**ALL of D0–D3 DONE (2026-06-03).** The abstract OS transfer bridge is complete in
+`ReflectionPositivity/TransferConstruction.lean` (commits `b0e1166`, `62d98ce`), sorry/
+axiom-free, axioms standard-only. D2 (`reflectionCorrelation_eq_inner_T_pow`) is the
+Feynman–Kac/Källén–Lehmann identity `⟪[f],Tⁿ[g]⟫ = ∫ f·(g∘τ^[n]∘θ) dμ` (induction on
+`transferOperator_coe`); D3 (`reflectionCorrelation_susceptibility_le`) gives the
+`N`-uniform (⇒ `Lt`-uniform) bound `∑_{n<N}|∫ v·(v∘τ^[n]∘θ)| ≤ ‖[v]‖²/(1−gap)` for any
+`GappedTransfer` with `G.T = transferOperator` and `⟪G.vacuum,[v]⟫=0`. **Remaining for B2
+is entirely pphi2-side:** the operator-coincidence lemma (instantiate `TimeTranslatedSystem`
+for the asym lattice; identify `H_phys`/`transferOperator` with `L2SpatialField`/the
+now-correctly-normalized `asymTransferOperatorCLM`, transporting the proved gap as the
+`GappedTransfer`), then the `1/a`-cancellation identification of D3's RHS with `C·Var_free`;
+B1 supplies `a`-uniformity.
 
 **D0–D1 landed (2026-06-03, commit `b0e1166`).** `ReflectionPositivity/TransferConstruction.lean`:
 `TimeTranslatedSystem`; `transferOperatorLinear`/`transferOperatorPre` (CLM, `‖·‖≤1`);

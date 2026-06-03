@@ -118,11 +118,22 @@ ReflectionSystem, PosObs, H_phys, instPreCore .......... PROVED (PhysicalHilbert
 reflectionInnerProduct_comp_left ....................... PROVED (Abstract.lean)
 GappedTransfer, susceptibility_le ...................... PROVED (TransferMatrix/VarianceBound)
   │
-  ├─ D0  TimeTranslatedSystem (structure) ............... TODO (mechanical; `contraction` a field)
-  ├─ D1  transferOperator + selfAdjoint + vacuum ........ TODO (6-step plan; Completion API)
+  ├─ D0  TimeTranslatedSystem (structure) ............... ✅ DONE (TransferConstruction.lean, b0e1166)
+  ├─ D1  transferOperator + selfAdjoint + vacuum ........ ✅ DONE (b0e1166; verified, axioms clean)
   ├─ D2  reflectionCorrelation_eq_inner_T_pow .......... TODO (induction; the "bridge")
   └─ D3  varianceTimeSum_le ............................. TODO (D2 + susceptibility_le)
 ```
+
+**D0–D1 landed (2026-06-03, commit `b0e1166`).** `ReflectionPositivity/TransferConstruction.lean`:
+`TimeTranslatedSystem`; `transferOperatorLinear`/`transferOperatorPre` (CLM, `‖·‖≤1`);
+`transferOperator` (= `ContinuousLinearMap.completion`, `Mathlib.Topology.Algebra.LinearMapCompletion`);
+`transferOperator_coe` (agrees on the dense image — pins the semantics); `transferOperator_selfAdjoint`;
+`transferOperatorPre_symmetric`; `innerForm_eq_reflectionInnerProduct`; `vacuum`/`transferOperator_vacuum`
+under `[IsProbabilityMeasure μ]`. Build clean, no sorry/axiom, `#print axioms` = standard only.
+**Note:** D1 supplies 4 of the 6 `GappedTransfer` fields (T, vacuum, selfAdjoint, vacuum_eq).
+The remaining `gap`/`norm_le_of_orthogonal` are NOT abstract — supplied at instantiation
+(pphi2's coincidence lemma transports the proved spectral gap). D2 next: it's a short
+induction on `transferOperator_coe`, and `transferOperatorPre_symmetric` is already the `n=1` core.
 
 The only non-mechanical input is `D0.contraction` (a-priori boundedness) — taken as a
 structure field, discharged for free in every concrete instance.

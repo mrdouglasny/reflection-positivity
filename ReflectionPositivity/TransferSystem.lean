@@ -81,6 +81,14 @@ theorem kPow_eq_iterT (Ts : TransferSystem S) (m : ℕ) (x : S) :
       rw [kPow_succ, Function.iterate_succ_apply', ← ih]
       rfl
 
+/-- The iterated kernels are nonnegative. -/
+theorem kPow_nonneg (Ts : TransferSystem S) (m : ℕ) (x y : S) : 0 ≤ Ts.kPow m x y := by
+  induction m generalizing x y with
+  | zero => exact Ts.k_nonneg x y
+  | succ m ih =>
+      rw [kPow_succ]
+      exact integral_nonneg (fun z => mul_nonneg (ih x z) (Ts.k_nonneg z y))
+
 /-- The path density on `ZMod n → S`: `∏_t k(ψ_t, ψ_{t+1})`. -/
 noncomputable def pathDensity (Ts : TransferSystem S) (n : ℕ) [NeZero n]
     (ψ : ZMod n → S) : ℝ :=

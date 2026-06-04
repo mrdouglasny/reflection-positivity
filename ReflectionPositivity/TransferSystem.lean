@@ -66,6 +66,21 @@ noncomputable def kPow (Ts : TransferSystem S) : ℕ → S → S → ℝ
 theorem kPow_succ (Ts : TransferSystem S) (m : ℕ) (x y : S) :
     Ts.kPow (m + 1) x y = ∫ z, Ts.kPow m x z * Ts.k z y ∂Ts.ν := rfl
 
+/-- The transfer step on slice-amplitudes: `(applyT g) y = ∫ z, g z · k z y dν`
+(the action of the transfer operator `T` on a function of the slice). -/
+noncomputable def applyT (Ts : TransferSystem S) (g : S → ℝ) (y : S) : ℝ :=
+  ∫ z, g z * Ts.k z y ∂Ts.ν
+
+/-- `kPow m x` is the `m`-fold transfer step applied to `k x`: `kPow m x = Tᵐ (k x ·)`. -/
+theorem kPow_eq_iterT (Ts : TransferSystem S) (m : ℕ) (x : S) :
+    Ts.kPow m x = (Ts.applyT)^[m] (Ts.k x) := by
+  induction m with
+  | zero => rfl
+  | succ m ih =>
+      funext y
+      rw [kPow_succ, Function.iterate_succ_apply', ← ih]
+      rfl
+
 /-- The path density on `ZMod n → S`: `∏_t k(ψ_t, ψ_{t+1})`. -/
 noncomputable def pathDensity (Ts : TransferSystem S) (n : ℕ) [NeZero n]
     (ψ : ZMod n → S) : ℝ :=

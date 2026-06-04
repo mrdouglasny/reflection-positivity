@@ -29,7 +29,8 @@ lattice QFT (e.g. pphi2's φ⁴₂ cylinder, with `k(x,y) = w(x)·G(x−y)·w(y)
 
 ## Main results (in progress)
 * `partition_eq_trace` — `Z_n = ∫ x, kPow (n−1) x x dν`.
-* `twoPoint_dictionary` — `∫ A(ψ₀)·B(ψ_t) dμ_n = Z_n⁻¹ · ∫∫ A·kPow_{t}·B·kPow_{n−t}`.
+* `twoPoint_dictionary` — `∫ A(ψ₀)·B(ψ_t) dμ_n = Z_n⁻¹ · ∫∫ A·kPow_{t−1}·B·kPow_{n−t−1}`
+  (with `kPow m` the kernel of `Tᵐ⁺¹`, so `kPow_{t−1}`/`kPow_{n−t−1}` are `Tᵗ`/`T^{n−t}`).
 -/
 
 open MeasureTheory
@@ -90,16 +91,6 @@ structure TransferSystem (S : Type*) [MeasurableSpace S] where
     Integrable
       (fun p : S × (Fin m → S) => openChainProduct k m p.1 p.1 p.2)
       (ν.prod (Measure.pi (fun _ : Fin m => ν)))
-  /-- Integrability for the two-point Fubini split into endpoints and the two arcs. -/
-  twoPoint_integrable : ∀ (a b : ℕ) (A B : S → ℝ),
-    Integrable (twoPointSplitDensity k a b A B)
-      (ν.prod (ν.prod
-        ((Measure.pi (fun _ : Fin a => ν)).prod (Measure.pi (fun _ : Fin b => ν)))))
-  /-- Slice integrability for the second Fubini step in the two-point split. -/
-  twoPoint_slice_integrable : ∀ (a b : ℕ) (A B : S → ℝ) (x : S),
-    Integrable (fun p : S × ((Fin a → S) × (Fin b → S)) =>
-      twoPointSplitDensity k a b A B (x, p))
-      (ν.prod ((Measure.pi (fun _ : Fin a => ν)).prod (Measure.pi (fun _ : Fin b => ν))))
   /-- The periodic path density is measurable. -/
   pathDensity_measurable : ∀ (n : ℕ) [NeZero n], Measurable (periodicPathDensity k n)
 
@@ -450,7 +441,10 @@ noncomputable def pathDensity (Ts : TransferSystem S) (n : ℕ) [NeZero n]
 noncomputable def partition (Ts : TransferSystem S) (n : ℕ) [NeZero n] : ℝ :=
   ∫ ψ, Ts.pathDensity n ψ ∂(Measure.pi (fun _ : ZMod n => Ts.ν))
 
-/-- The normalized periodic path (Gibbs) measure on `ZMod n → S`. -/
+/-- The periodic path (Gibbs) measure on `ZMod n → S`, normalized by `Z_n = partition n`.
+This is a genuine probability measure exactly when `partition n > 0` (e.g. for a
+positivity-improving kernel); the dictionary theorems below carry the `Z_n⁻¹` factor
+explicitly and do not require it. -/
 noncomputable def pathMeasure (Ts : TransferSystem S) (n : ℕ) [NeZero n] :
     Measure (ZMod n → S) :=
   (ENNReal.ofReal (Ts.partition n))⁻¹ •
@@ -496,7 +490,14 @@ lemma partition_nonneg (Ts : TransferSystem S) (n : ℕ) [NeZero n] :
   exact integral_nonneg fun x => Ts.kPow_nonneg (n - 1) x x
 
 set_option linter.flexible false in
-theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ) :
+theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ)
+    (hAB : Integrable (twoPointSplitDensity Ts.k a b A B)
+      (Ts.ν.prod (Ts.ν.prod
+        ((Measure.pi (fun _ : Fin a => Ts.ν)).prod (Measure.pi (fun _ : Fin b => Ts.ν))))))
+    (hSlice : ∀ x : S, Integrable (fun p : S × ((Fin a → S) × (Fin b → S)) =>
+        twoPointSplitDensity Ts.k a b A B (x, p))
+      (Ts.ν.prod ((Measure.pi (fun _ : Fin a => Ts.ν)).prod
+        (Measure.pi (fun _ : Fin b => Ts.ν))))) :
     (∫ ψ : Fin ((a + 1) + (b + 1)) → S,
         (∏ i : Fin ((a + 1) + (b + 1)), Ts.k (ψ i) (ψ (i + 1))) *
           (A (ψ 0) * B (ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1)))))
@@ -569,7 +570,7 @@ theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ
       twoPointSplitDensity Ts.k a b A B p
       ∂Ts.ν.prod (Ts.ν.prod (μq.prod μr))) =
     ∫ x, ∫ y, A x * Ts.kPow a x y * B y * Ts.kPow b y x ∂Ts.ν ∂Ts.ν
-  rw [integral_prod _ (Ts.twoPoint_integrable a b A B)]
+  rw [integral_prod _ hAB]
   simp only [twoPointSplitDensity]
   have hinner (x : S) :
       (∫ y : S × ((Fin a → S) × (Fin b → S)),
@@ -582,7 +583,7 @@ theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ
               openChainProduct Ts.k b y x qr.2 * A x * B y
           ∂μq.prod μr ∂Ts.ν := by
     exact integral_prod _ (by
-      simpa [twoPointSplitDensity, μq, μr] using Ts.twoPoint_slice_integrable a b A B x)
+      simpa [twoPointSplitDensity, μq, μr] using hSlice x)
   simp_rw [hinner]
   have hqr (x y : S) :
       (∫ qr : (Fin a → S) × (Fin b → S),
@@ -620,7 +621,16 @@ theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ
   simp_rw [hqr]
 
 theorem twoPoint_fubini (Ts : TransferSystem S) (n : ℕ) [NeZero n] {t : ℕ}
-    (ht0 : 0 < t) (htn : t < n) (A B : S → ℝ) :
+    (ht0 : 0 < t) (htn : t < n) (A B : S → ℝ)
+    (hAB : Integrable (twoPointSplitDensity Ts.k (t - 1) (n - t - 1) A B)
+      (Ts.ν.prod (Ts.ν.prod
+        ((Measure.pi (fun _ : Fin (t - 1) => Ts.ν)).prod
+          (Measure.pi (fun _ : Fin (n - t - 1) => Ts.ν))))))
+    (hSlice : ∀ x : S, Integrable
+        (fun p : S × ((Fin (t - 1) → S) × (Fin (n - t - 1) → S)) =>
+          twoPointSplitDensity Ts.k (t - 1) (n - t - 1) A B (x, p))
+      (Ts.ν.prod ((Measure.pi (fun _ : Fin (t - 1) => Ts.ν)).prod
+        (Measure.pi (fun _ : Fin (n - t - 1) => Ts.ν))))) :
     ∫ ψ, periodicPathDensity Ts.k n ψ * (A (ψ 0) * B (ψ (t : ZMod n)))
         ∂(Measure.pi fun _ : ZMod n => Ts.ν)
       = ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y *
@@ -734,7 +744,7 @@ theorem twoPoint_fubini (Ts : TransferSystem S) (n : ℕ) [NeZero n] {t : ℕ}
         (A (ψ 0) * B (ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1)))))
       ∂Measure.pi (fun _ : Fin ((a + 1) + (b + 1)) => Ts.ν)) =
     ∫ x, ∫ y, A x * Ts.kPow a x y * (B y * Ts.kPow b y x) ∂Ts.ν ∂Ts.ν
-  exact twoPoint_fubini_fin Ts a b A B
+  exact twoPoint_fubini_fin Ts a b A B hAB hSlice
 
 /-- **The two-point Feynman–Kac dictionary.** For `0 < t < n` and bounded observables
 `A B : S → ℝ`, the time-`(0,t)` correlation of the path measure is the kernel-composition
@@ -745,7 +755,15 @@ slices (iterated Fubini), composing the bonds `0→t` into `T^t`'s kernel and `t
 the circle) into `T^{n−t}`'s kernel. -/
 theorem twoPoint_dictionary (Ts : TransferSystem S) (n : ℕ) [NeZero n]
     {t : ℕ} (ht0 : 0 < t) (htn : t < n) (A B : S → ℝ)
-    (_hA : Measurable A) (_hB : Measurable B) :
+    (hAB : Integrable (twoPointSplitDensity Ts.k (t - 1) (n - t - 1) A B)
+      (Ts.ν.prod (Ts.ν.prod
+        ((Measure.pi (fun _ : Fin (t - 1) => Ts.ν)).prod
+          (Measure.pi (fun _ : Fin (n - t - 1) => Ts.ν))))))
+    (hSlice : ∀ x : S, Integrable
+        (fun p : S × ((Fin (t - 1) → S) × (Fin (n - t - 1) → S)) =>
+          twoPointSplitDensity Ts.k (t - 1) (n - t - 1) A B (x, p))
+      (Ts.ν.prod ((Measure.pi (fun _ : Fin (t - 1) => Ts.ν)).prod
+        (Measure.pi (fun _ : Fin (n - t - 1) => Ts.ν))))) :
     ∫ ψ, A (ψ 0) * B (ψ (t : ZMod n)) ∂(Ts.pathMeasure n)
       = (Ts.partition n)⁻¹ *
         ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y * (B y * Ts.kPow (n - t - 1) y x)
@@ -774,7 +792,7 @@ theorem twoPoint_dictionary (Ts : TransferSystem S) (n : ℕ) [NeZero n]
       (Ts.partition n)⁻¹ *
         ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y *
           (B y * Ts.kPow (n - t - 1) y x) ∂Ts.ν ∂Ts.ν
-    rw [← twoPoint_fubini Ts n ht0 htn A B]
+    rw [← twoPoint_fubini Ts n ht0 htn A B hAB hSlice]
     congr 1
     rw [ENNReal.toReal_inv]
     rw [ENNReal.toReal_ofReal]

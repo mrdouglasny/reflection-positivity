@@ -59,6 +59,11 @@ noncomputable def periodicPathDensity (k : S → S → ℝ) (n : ℕ) [NeZero n]
     (ψ : ZMod n → S) : ℝ :=
   ∏ t : ZMod n, k (ψ t) (ψ (t + 1))
 
+noncomputable def twoPointSplitDensity (k : S → S → ℝ) (a b : ℕ) (A B : S → ℝ)
+    (p : S × (S × ((Fin a → S) × (Fin b → S)))) : ℝ :=
+  openChainProduct k a p.1 p.2.1 p.2.2.1 *
+    openChainProduct k b p.2.1 p.1 p.2.2.2 * A p.1 * B p.2.1
+
 /-- An abstract transfer system: a single-time-slice state space `(S, ν)` with a symmetric
 nonnegative transfer kernel `k`. The periodic path measure on `ZMod n → S` has density
 `∏_t k(ψ_t, ψ_{t+1})` against `ν^{⊗n}`. -/
@@ -85,20 +90,18 @@ structure TransferSystem (S : Type*) [MeasurableSpace S] where
     Integrable
       (fun p : S × (Fin m → S) => openChainProduct k m p.1 p.1 p.2)
       (ν.prod (Measure.pi (fun _ : Fin m => ν)))
+  /-- Integrability for the two-point Fubini split into endpoints and the two arcs. -/
+  twoPoint_integrable : ∀ (a b : ℕ) (A B : S → ℝ),
+    Integrable (twoPointSplitDensity k a b A B)
+      (ν.prod (ν.prod
+        ((Measure.pi (fun _ : Fin a => ν)).prod (Measure.pi (fun _ : Fin b => ν)))))
+  /-- Slice integrability for the second Fubini step in the two-point split. -/
+  twoPoint_slice_integrable : ∀ (a b : ℕ) (A B : S → ℝ) (x : S),
+    Integrable (fun p : S × ((Fin a → S) × (Fin b → S)) =>
+      twoPointSplitDensity k a b A B (x, p))
+      (ν.prod ((Measure.pi (fun _ : Fin a => ν)).prod (Measure.pi (fun _ : Fin b => ν))))
   /-- The periodic path density is measurable. -/
   pathDensity_measurable : ∀ (n : ℕ) [NeZero n], Measurable (periodicPathDensity k n)
-  /-- ⚠ TEMPORARY ASSUMED HYPOTHESIS (NOT a side-condition — this is the two-point
-  numerator identity itself, i.e. essentially the conclusion of `twoPoint_dictionary`).
-  It must be **proved and removed**: the two-arc generalization of `partition_eq_trace`
-  (peel slices `0` and `t`, fold the arcs `0→t` and `t→0` into `kPow (t-1)` / `kPow (n-t-1)`
-  via the same `openChain_fold` machinery). Until then `twoPoint_dictionary` is only
-  conditional. -/
-  twoPoint_fubini : ∀ (n : ℕ) [NeZero n] {t : ℕ} (_ : 0 < t) (_ : t < n)
-      (A B : S → ℝ),
-    ∫ ψ, periodicPathDensity k n ψ * (A (ψ 0) * B (ψ (t : ZMod n)))
-      ∂(Measure.pi (fun _ : ZMod n => ν)) =
-    ∫ x, ∫ y, A x * kernelPower ν k (t - 1) x y *
-        (B y * kernelPower ν k (n - t - 1) y x) ∂ν ∂ν
 
 namespace TransferSystem
 
@@ -247,6 +250,197 @@ lemma cyclicProduct_cons_eq_openChainProduct (k : S → S → ℝ) (m : ℕ) (x 
       rw [show (i.castSucc.succ.castLT i.succ.isLt : Fin (m + 1)) = i.succ by rfl]
       simp
 
+set_option linter.flexible false in
+omit [MeasurableSpace S] in
+lemma append_left_cyclicProduct_eq_openChainProduct (k : S → S → ℝ) (a b : ℕ)
+    (x y : S) (q : Fin a → S) (r : Fin b → S) :
+    (∏ i : Fin (a + 1),
+        k (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (Fin.castAdd (b + 1) i))
+          (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (Fin.castAdd (b + 1) i + 1))) =
+      openChainProduct k a x y q := by
+  rw [openChainProduct]
+  apply Finset.prod_congr rfl
+  intro i _
+  cases i using Fin.lastCases with
+  | last =>
+      have hnext :
+          Fin.castAdd (b + 1) (Fin.last a) + 1 =
+            Fin.natAdd (a + 1) (0 : Fin (b + 1)) := by
+        have hone : (1 : Fin ((a + 1) + (b + 1))).val = 1 := by
+          change 1 % ((a + 1) + (b + 1)) = 1
+          exact Nat.mod_eq_of_lt (by omega)
+        ext
+        simp only [Fin.val_add, hone, Fin.val_castAdd, Fin.val_last, Fin.val_natAdd,
+          Fin.val_zero]
+        rw [Nat.mod_eq_of_lt]
+        · simp
+      rw [hnext]
+      rw [Fin.append_right]
+      simp [openChainVertices, Fin.snoc, Fin.cons]
+  | cast i =>
+      have hnext :
+          Fin.castAdd (b + 1) i.castSucc + 1 = Fin.castAdd (b + 1) i.succ := by
+        have hone : (1 : Fin ((a + 1) + (b + 1))).val = 1 := by
+          change 1 % ((a + 1) + (b + 1)) = 1
+          exact Nat.mod_eq_of_lt (by omega)
+        ext
+        simp only [Fin.val_add, hone, Fin.val_castAdd, Fin.val_succ]
+        rw [Nat.mod_eq_of_lt]
+        · simp
+        · omega
+      rw [hnext]
+      simp [openChainVertices, Fin.snoc, Fin.cons]
+      rw [show (i.castSucc.succ.castLT i.succ.isLt : Fin (a + 1)) = i.succ by rfl]
+      simp
+
+set_option linter.flexible false in
+set_option linter.unnecessarySimpa false in
+omit [MeasurableSpace S] in
+lemma append_right_cyclicProduct_eq_openChainProduct (k : S → S → ℝ) (a b : ℕ)
+    (x y : S) (q : Fin a → S) (r : Fin b → S) :
+    (∏ i : Fin (b + 1),
+        k (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (Fin.natAdd (a + 1) i))
+          (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (Fin.natAdd (a + 1) i + 1))) =
+      openChainProduct k b y x r := by
+  rw [openChainProduct]
+  apply Finset.prod_congr rfl
+  intro i _
+  cases i using Fin.lastCases with
+  | last =>
+      have hcur :
+          Fin.natAdd (a + 1) (Fin.last b) = Fin.last (a + 1 + b) := by
+        ext
+        simp
+      have hnext :
+          Fin.natAdd (a + 1) (Fin.last b) + 1 =
+            (0 : Fin ((a + 1) + (b + 1))) := by
+        ext
+        simp
+      rw [hnext]
+      rw [Fin.append_right]
+      rw [show (0 : Fin ((a + 1) + (b + 1))) =
+          Fin.castAdd (b + 1) (0 : Fin (a + 1)) by rfl]
+      rw [Fin.append_left]
+      simp [openChainVertices, Fin.snoc, Fin.cons]
+  | cast i =>
+      have hnext :
+          (Fin.natAdd (a + 1) i.castSucc + 1 : Fin ((a + 1) + (b + 1))) =
+            Fin.natAdd (a + 1) i.succ := by
+        have hone : (1 : Fin ((a + 1) + (b + 1))).val = 1 := by
+          change 1 % ((a + 1) + (b + 1)) = 1
+          exact Nat.mod_eq_of_lt (by omega)
+        ext
+        simp only [Fin.val_add, hone, Fin.val_natAdd, Fin.val_succ]
+        rw [Nat.mod_eq_of_lt]
+        · simp [Nat.add_assoc]
+        · have hi : ↑i.castSucc + 1 < b + 1 := by
+            simpa using Nat.succ_lt_succ i.isLt
+          simpa [Nat.add_assoc] using Nat.add_lt_add_left hi (a + 1)
+      rw [hnext]
+      simp [openChainVertices, Fin.snoc, Fin.cons]
+      rw [show (i.castSucc.succ.castLT i.succ.isLt : Fin (b + 1)) = i.succ by rfl]
+      simp
+
+omit [MeasurableSpace S] in
+lemma cyclicProduct_append_cons_eq_openChainProducts (k : S → S → ℝ) (a b : ℕ)
+    (x y : S) (q : Fin a → S) (r : Fin b → S) :
+    (∏ i : Fin ((a + 1) + (b + 1)),
+        k (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r) i)
+          (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (i + 1))) =
+      openChainProduct k a x y q * openChainProduct k b y x r := by
+  rw [Fin.prod_univ_add]
+  rw [append_left_cyclicProduct_eq_openChainProduct,
+    append_right_cyclicProduct_eq_openChainProduct]
+
+omit [MeasurableSpace S] in
+lemma cyclicProduct_append_cons_eq_openChainProducts_assoc (k : S → S → ℝ) (a b : ℕ)
+    (x y : S) (q : Fin a → S) (r : Fin b → S) :
+    (∏ i : Fin (((a + 1) + b) + 1),
+        k (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r) i)
+          (Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r)
+            (i + 1))) =
+      openChainProduct k a x y q * openChainProduct k b y x r := by
+  simpa using cyclicProduct_append_cons_eq_openChainProducts k a b x y q r
+
+omit [MeasurableSpace S] in
+lemma piCongrLeft_finSumFinEquiv_sumPi_symm_eq_append (a b : ℕ)
+    (q : Fin a → S) (r : Fin b → S) :
+    (Equiv.piCongrLeft (fun _ : Fin (a + b) => S) finSumFinEquiv)
+        ((Equiv.sumPiEquivProdPi (fun _ : Fin a ⊕ Fin b => S)).symm (q, r)) =
+      Fin.append q r := by
+  ext i
+  cases i using Fin.addCases with
+  | left i =>
+      simpa [finSumFinEquiv_apply_left, Fin.append_left] using
+        (@Equiv.piCongrLeft_apply_apply (Fin a ⊕ Fin b) (Fin (a + b))
+          (fun _ : Fin (a + b) => S) finSumFinEquiv
+          ((Equiv.sumPiEquivProdPi (fun _ : Fin a ⊕ Fin b => S)).symm (q, r))
+          (Sum.inl i))
+  | right i =>
+      simpa [finSumFinEquiv_apply_right, Fin.append_right] using
+        (@Equiv.piCongrLeft_apply_apply (Fin a ⊕ Fin b) (Fin (a + b))
+          (fun _ : Fin (a + b) => S) finSumFinEquiv
+          ((Equiv.sumPiEquivProdPi (fun _ : Fin a ⊕ Fin b => S)).symm (q, r))
+          (Sum.inr i))
+
+set_option linter.unnecessarySimpa false in
+omit [MeasurableSpace S] in
+lemma insertNth_natAdd_zero_append_eq_append_cons (a b : ℕ) (y : S)
+    (q : Fin a → S) (r : Fin b → S) :
+    (@Fin.insertNth (a + b) (fun _ : Fin (a + b + 1) => S)
+      (Fin.natAdd a (0 : Fin (b + 1))) y (Fin.append q r)) =
+      Fin.append q (@Fin.cons b (fun _ => S) y r) := by
+  funext i
+  refine @Fin.addCases a (b + 1) (fun i =>
+    (@Fin.insertNth (a + b) (fun _ : Fin (a + b + 1) => S)
+      (Fin.natAdd a (0 : Fin (b + 1))) y (Fin.append q r)) i =
+      Fin.append q (@Fin.cons b (fun _ => S) y r) i) ?_ ?_ i
+  · intro i
+    have hsucc :
+        (Fin.natAdd a (0 : Fin (b + 1))).succAbove (Fin.castAdd b i) =
+          Fin.castAdd (b + 1) i := by
+      rw [Fin.succAbove_of_castSucc_lt]
+      · rfl
+      · simpa [Fin.lt_def, Fin.natAdd] using i.isLt
+    rw [← hsucc, Fin.insertNth_apply_succAbove, hsucc]
+    simp
+  · intro i
+    cases i using Fin.cases with
+      | zero =>
+          simp [Fin.insertNth_apply_same]
+      | succ i =>
+          have hsucc :
+              (Fin.natAdd a (0 : Fin (b + 1))).succAbove (Fin.natAdd a i) =
+                Fin.natAdd a i.succ := by
+            rw [Fin.succAbove_of_le_castSucc]
+            · ext
+              simp [Fin.natAdd]
+              omega
+            · simp [Fin.le_def, Fin.natAdd]
+          rw [← hsucc, Fin.insertNth_apply_succAbove, hsucc]
+          simp
+
+omit [MeasurableSpace S] in
+lemma cons_piCongrLeft_finCongr_append_cons_eq_append_cons (a b : ℕ)
+    (h : a + (b + 1) = (a + 1) + b) (x y : S) (q : Fin a → S) (r : Fin b → S) :
+    (fun i : Fin (((a + 1) + b) + 1) =>
+      @Fin.cons (((a + 1) + b)) (fun _ => S) x
+        ((Equiv.piCongrLeft (fun _ : Fin ((a + 1) + b) => S) (finCongr h))
+          (Fin.append q (@Fin.cons b (fun _ => S) y r))) i) =
+      Fin.append (@Fin.cons a (fun _ => S) x q) (@Fin.cons b (fun _ => S) y r) := by
+  rw [Fin.append_cons]
+  ext i
+  cases i using Fin.cases with
+  | zero =>
+      simp [Fin.cons]
+  | succ i =>
+      simp [Fin.cons, Equiv.piCongrLeft_apply_eq_cast]
+
 /-- The path density on `ZMod n → S`: `∏_t k(ψ_t, ψ_{t+1})`. -/
 noncomputable def pathDensity (Ts : TransferSystem S) (n : ℕ) [NeZero n]
     (ψ : ZMod n → S) : ℝ :=
@@ -279,7 +473,7 @@ theorem partition_eq_trace (Ts : TransferSystem S) (n : ℕ) [NeZero n] :
   | succ m =>
       rw [partition]
       simp only [Nat.add_one_sub_one]
-      let e := (ZMod.finEquiv (m + 1)).toEquiv
+      let e := ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))
       rw [← (measurePreserving_piCongrLeft (fun _ : ZMod (m + 1) => Ts.ν) e).integral_comp']
       dsimp [e]
       change (∫ ψ : Fin (m + 1) → S,
@@ -300,6 +494,247 @@ lemma partition_nonneg (Ts : TransferSystem S) (n : ℕ) [NeZero n] :
     0 ≤ Ts.partition n := by
   rw [partition_eq_trace]
   exact integral_nonneg fun x => Ts.kPow_nonneg (n - 1) x x
+
+set_option linter.flexible false in
+theorem twoPoint_fubini_fin (Ts : TransferSystem S) (a b : ℕ) (A B : S → ℝ) :
+    (∫ ψ : Fin ((a + 1) + (b + 1)) → S,
+        (∏ i : Fin ((a + 1) + (b + 1)), Ts.k (ψ i) (ψ (i + 1))) *
+          (A (ψ 0) * B (ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1)))))
+        ∂Measure.pi (fun _ : Fin ((a + 1) + (b + 1)) => Ts.ν)) =
+      ∫ x, ∫ y, A x * Ts.kPow a x y * (B y * Ts.kPow b y x) ∂Ts.ν ∂Ts.ν := by
+  letI := Ts.ν_sigmaFinite
+  let μq : Measure (Fin a → S) := Measure.pi (fun _ : Fin a => Ts.ν)
+  let μr : Measure (Fin b → S) := Measure.pi (fun _ : Fin b => Ts.ν)
+  let eRest : Fin (a + (b + 1)) ≃ Fin ((a + 1) + b) := finCongr (by omega)
+  let eRestMeas := MeasurableEquiv.piCongrLeft (fun _ : Fin ((a + 1) + b) => S) eRest
+  let iY : Fin (a + (b + 1)) := Fin.natAdd a (0 : Fin (b + 1))
+  let eY := (MeasurableEquiv.piFinSuccAbove (fun _ : Fin (a + (b + 1)) => S) iY).symm
+  let eQR := (MeasurableEquiv.sumPiEquivProdPi (fun _ : Fin a ⊕ Fin b => S)).symm
+  let eSum := MeasurableEquiv.piCongrLeft (fun _ : Fin (a + b) => S) finSumFinEquiv
+  let eRestSplit := eQR.trans eSum
+  let eYNorm := (MeasurableEquiv.prodCongr (MeasurableEquiv.refl S) eRestSplit).trans eY
+  let eYRest := eYNorm.trans eRestMeas
+  let eAfterFirst := MeasurableEquiv.prodCongr (MeasurableEquiv.refl S) eYRest
+  have hRestLen : MeasurePreserving eRestMeas
+      (Measure.pi (fun _ : Fin (a + (b + 1)) => Ts.ν))
+      (Measure.pi (fun _ : Fin ((a + 1) + b) => Ts.ν)) :=
+    measurePreserving_piCongrLeft (fun _ : Fin ((a + 1) + b) => Ts.ν) eRest
+  have hY : MeasurePreserving eY
+      (Ts.ν.prod (Measure.pi (fun _ : Fin (a + b) => Ts.ν)))
+      (Measure.pi (fun _ : Fin (a + (b + 1)) => Ts.ν)) :=
+    (measurePreserving_piFinSuccAbove (fun _ : Fin (a + (b + 1)) => Ts.ν) iY).symm
+  have hQR : MeasurePreserving eQR (μq.prod μr)
+      (Measure.pi (fun _ : Fin a ⊕ Fin b => Ts.ν)) :=
+    (measurePreserving_sumPiEquivProdPi (fun _ : Fin a ⊕ Fin b => Ts.ν)).symm
+  have hSum : MeasurePreserving eSum
+      (Measure.pi (fun _ : Fin a ⊕ Fin b => Ts.ν))
+      (Measure.pi (fun _ : Fin (a + b) => Ts.ν)) :=
+    measurePreserving_piCongrLeft (fun _ : Fin (a + b) => Ts.ν) finSumFinEquiv
+  have hRestSplit : MeasurePreserving eRestSplit (μq.prod μr)
+      (Measure.pi (fun _ : Fin (a + b) => Ts.ν)) :=
+    hSum.comp hQR
+  have hYNorm : MeasurePreserving eYNorm
+      (Ts.ν.prod (μq.prod μr))
+      (Measure.pi (fun _ : Fin (a + (b + 1)) => Ts.ν)) :=
+    hY.comp (MeasurePreserving.prod (MeasurePreserving.id Ts.ν) hRestSplit)
+  have hYRest : MeasurePreserving eYRest
+      (Ts.ν.prod (μq.prod μr))
+      (Measure.pi (fun _ : Fin ((a + 1) + b) => Ts.ν)) :=
+    hRestLen.comp hYNorm
+  have hAfterFirst : MeasurePreserving eAfterFirst
+      (Ts.ν.prod (Ts.ν.prod (μq.prod μr)))
+      (Ts.ν.prod (Measure.pi (fun _ : Fin ((a + 1) + b) => Ts.ν))) :=
+    MeasurePreserving.prod (MeasurePreserving.id Ts.ν) hYRest
+  change (∫ ψ : Fin (((a + 1) + b) + 1) → S,
+      (∏ i : Fin (((a + 1) + b) + 1), Ts.k (ψ i) (ψ (i + 1))) *
+        (A (ψ 0) * B (ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1)))))
+      ∂Measure.pi (fun _ : Fin (((a + 1) + b) + 1) => Ts.ν)) =
+    ∫ x, ∫ y, A x * Ts.kPow a x y * (B y * Ts.kPow b y x) ∂Ts.ν ∂Ts.ν
+  rw [← ((measurePreserving_piFinSuccAbove
+    (fun _ : Fin (((a + 1) + b) + 1) => Ts.ν) 0).symm).integral_comp']
+  rw [← hAfterFirst.integral_comp']
+  simp_rw [MeasurableEquiv.piFinSuccAbove_symm_apply]
+  simp_rw [Fin.insertNthEquiv_zero]
+  simp only [Fin.consEquiv_apply]
+  simp [eAfterFirst, eYRest, eYNorm, eY, eRestMeas, eRestSplit, eQR, eSum, eRest, iY,
+    MeasurableEquiv.coe_piCongrLeft, MeasurableEquiv.coe_sumPiEquivProdPi_symm,
+    Fin.insertNthEquiv, Equiv.prodCongr, MeasurableEquiv.prodCongr]
+  simp_rw [piCongrLeft_finSumFinEquiv_sumPi_symm_eq_append a b]
+  simp_rw [insertNth_natAdd_zero_append_eq_append_cons a b]
+  simp_rw [cons_piCongrLeft_finCongr_append_cons_eq_append_cons a b]
+  simp_rw [cyclicProduct_append_cons_eq_openChainProducts_assoc Ts.k a b]
+  simp only [Fin.append_right, Fin.cons_zero]
+  ring_nf
+  change (∫ p : S × (S × ((Fin a → S) × (Fin b → S))),
+      twoPointSplitDensity Ts.k a b A B p
+      ∂Ts.ν.prod (Ts.ν.prod (μq.prod μr))) =
+    ∫ x, ∫ y, A x * Ts.kPow a x y * B y * Ts.kPow b y x ∂Ts.ν ∂Ts.ν
+  rw [integral_prod _ (Ts.twoPoint_integrable a b A B)]
+  simp only [twoPointSplitDensity]
+  have hinner (x : S) :
+      (∫ y : S × ((Fin a → S) × (Fin b → S)),
+          openChainProduct Ts.k a x y.1 y.2.1 *
+              openChainProduct Ts.k b y.1 x y.2.2 * A x * B y.1
+          ∂Ts.ν.prod ((Measure.pi (fun _ : Fin a => Ts.ν)).prod
+            (Measure.pi (fun _ : Fin b => Ts.ν)))) =
+        ∫ y, ∫ qr : (Fin a → S) × (Fin b → S),
+          openChainProduct Ts.k a x y qr.1 *
+              openChainProduct Ts.k b y x qr.2 * A x * B y
+          ∂μq.prod μr ∂Ts.ν := by
+    exact integral_prod _ (by
+      simpa [twoPointSplitDensity, μq, μr] using Ts.twoPoint_slice_integrable a b A B x)
+  simp_rw [hinner]
+  have hqr (x y : S) :
+      (∫ qr : (Fin a → S) × (Fin b → S),
+          openChainProduct Ts.k a x y qr.1 *
+              openChainProduct Ts.k b y x qr.2 * A x * B y
+          ∂μq.prod μr) =
+        A x * Ts.kPow a x y * B y * Ts.kPow b y x := by
+    calc
+      (∫ qr : (Fin a → S) × (Fin b → S),
+          openChainProduct Ts.k a x y qr.1 *
+              openChainProduct Ts.k b y x qr.2 * A x * B y
+          ∂μq.prod μr)
+          = ∫ qr : (Fin a → S) × (Fin b → S),
+              (openChainProduct Ts.k a x y qr.1 * A x) *
+                (openChainProduct Ts.k b y x qr.2 * B y) ∂μq.prod μr := by
+              congr 1
+              ext qr
+              ring
+      _ = (∫ q, openChainProduct Ts.k a x y q * A x ∂μq) *
+            ∫ r, openChainProduct Ts.k b y x r * B y ∂μr := by
+              exact integral_prod_mul
+                (μ := μq) (ν := μr)
+                (fun q => openChainProduct Ts.k a x y q * A x)
+                (fun r => openChainProduct Ts.k b y x r * B y)
+      _ = A x * Ts.kPow a x y * B y * Ts.kPow b y x := by
+              rw [integral_mul_const, integral_mul_const]
+              simp_rw [openChainProduct_eq_density]
+              rw [show (∫ q : Fin a → S, openChainDensity Ts.k a x y q ∂μq) =
+                  Ts.kPow a x y by
+                simpa [μq] using openChain_fold Ts a x y]
+              rw [show (∫ r : Fin b → S, openChainDensity Ts.k b y x r ∂μr) =
+                  Ts.kPow b y x by
+                simpa [μr] using openChain_fold Ts b y x]
+              ring
+  simp_rw [hqr]
+
+theorem twoPoint_fubini (Ts : TransferSystem S) (n : ℕ) [NeZero n] {t : ℕ}
+    (ht0 : 0 < t) (htn : t < n) (A B : S → ℝ) :
+    ∫ ψ, periodicPathDensity Ts.k n ψ * (A (ψ 0) * B (ψ (t : ZMod n)))
+        ∂(Measure.pi fun _ : ZMod n => Ts.ν)
+      = ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y *
+          (B y * Ts.kPow (n - t - 1) y x) ∂Ts.ν ∂Ts.ν := by
+  letI := Ts.ν_sigmaFinite
+  cases n with
+  | zero =>
+      cases NeZero.ne 0 rfl
+  | succ m =>
+  let a := t - 1
+  let b := (m + 1) - t - 1
+  have hlen : ((a + 1) + (b + 1)) = m + 1 := by
+    dsimp [a, b]
+    omega
+  let eLen : Fin ((a + 1) + (b + 1)) ≃ Fin (m + 1) := finCongr hlen
+  let eZ := ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))
+  rw [← (measurePreserving_piCongrLeft (fun _ : ZMod (m + 1) => Ts.ν) eZ).integral_comp']
+  dsimp [periodicPathDensity, eZ]
+  have hprod (ψ : Fin (m + 1) → S) :
+      (∏ z : ZMod (m + 1),
+          Ts.k ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+              ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ z)
+            ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+              ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ (z + 1))) =
+        ∏ i : Fin (m + 1), Ts.k (ψ i) (ψ (i + 1)) := by
+    symm
+    refine Fintype.prod_equiv ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))
+      (fun i : Fin (m + 1) => Ts.k (ψ i) (ψ (i + 1)))
+      (fun z : ZMod (m + 1) =>
+        Ts.k ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+            ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ z)
+          ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+            ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ (z + 1))) ?_
+    intro i
+    rfl
+  have hzero (ψ : Fin (m + 1) → S) :
+      ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+          ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ 0) = ψ 0 := by
+    rfl
+  have htcoord (ψ : Fin (m + 1) → S) :
+      ((MeasurableEquiv.piCongrLeft (fun _ : ZMod (m + 1) => S)
+          ((ZMod.finEquiv (m + 1) : Fin (m + 1) ≃ ZMod (m + 1)))) ψ (t : ZMod (m + 1))) =
+        ψ ⟨t, htn⟩ := by
+    change ψ (t : ZMod (m + 1)) = ψ ⟨t, htn⟩
+    congr
+    ext
+    exact Nat.mod_eq_of_lt htn
+  simp_rw [hprod, hzero, htcoord]
+  change (∫ ψ : Fin (m + 1) → S,
+      (∏ i : Fin (m + 1), Ts.k (ψ i) (ψ (i + 1))) *
+        (A (ψ 0) * B (ψ ⟨t, htn⟩))
+      ∂Measure.pi (fun _ : Fin (m + 1) => Ts.ν)) =
+    ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y *
+      (B y * Ts.kPow ((m + 1) - t - 1) y x) ∂Ts.ν ∂Ts.ν
+  rw [← (measurePreserving_piCongrLeft (fun _ : Fin (m + 1) => Ts.ν) eLen).integral_comp']
+  dsimp [eLen]
+  have hprodLen (ψ : Fin ((a + 1) + (b + 1)) → S) :
+      (∏ i : Fin (m + 1),
+          Ts.k ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+              (finCongr hlen)) ψ i)
+            ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+              (finCongr hlen)) ψ (i + 1))) =
+        ∏ i : Fin ((a + 1) + (b + 1)), Ts.k (ψ i) (ψ (i + 1)) := by
+    symm
+    refine Fintype.prod_equiv (finCongr hlen)
+      (fun i : Fin ((a + 1) + (b + 1)) => Ts.k (ψ i) (ψ (i + 1)))
+      (fun i : Fin (m + 1) =>
+        Ts.k ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+            (finCongr hlen)) ψ i)
+          ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+            (finCongr hlen)) ψ (i + 1))) ?_
+    intro i
+    have hsucc : (finCongr hlen) (i + 1) = (finCongr hlen i + 1 : Fin (m + 1)) := by
+      ext
+      simp [Fin.val_add, hlen]
+    change Ts.k (ψ i) (ψ (i + 1)) =
+      Ts.k ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+          (finCongr hlen)) ψ ((finCongr hlen) i))
+        ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+          (finCongr hlen)) ψ ((finCongr hlen i) + 1))
+    rw [← hsucc]
+    rw [MeasurableEquiv.piCongrLeft_apply_apply
+      (β := fun _ : Fin (m + 1) => S) (finCongr hlen) ψ i]
+    rw [MeasurableEquiv.piCongrLeft_apply_apply
+      (β := fun _ : Fin (m + 1) => S) (finCongr hlen) ψ (i + 1)]
+  have hzeroLen (ψ : Fin ((a + 1) + (b + 1)) → S) :
+      ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+          (finCongr hlen)) ψ 0) = ψ 0 := by
+    rw [← show (finCongr hlen) (0 : Fin ((a + 1) + (b + 1))) = (0 : Fin (m + 1)) by
+      ext
+      simp]
+    simpa using
+      (@Equiv.piCongrLeft_apply_apply (Fin ((a + 1) + (b + 1))) (Fin (m + 1))
+        (fun _ : Fin (m + 1) => S) (finCongr hlen) ψ (0 : Fin ((a + 1) + (b + 1))))
+  have htLen (ψ : Fin ((a + 1) + (b + 1)) → S) :
+      ((MeasurableEquiv.piCongrLeft (fun _ : Fin (m + 1) => S)
+          (finCongr hlen)) ψ ⟨t, htn⟩) =
+        ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1))) := by
+    rw [← show (finCongr hlen) (Fin.natAdd (a + 1) (0 : Fin (b + 1))) =
+        (⟨t, htn⟩ : Fin (m + 1)) by
+      ext
+      dsimp [a, b]
+      omega]
+    simpa using
+      (@Equiv.piCongrLeft_apply_apply (Fin ((a + 1) + (b + 1))) (Fin (m + 1))
+        (fun _ : Fin (m + 1) => S) (finCongr hlen) ψ
+        (Fin.natAdd (a + 1) (0 : Fin (b + 1))))
+  simp_rw [hprodLen, hzeroLen, htLen]
+  change (∫ ψ : Fin ((a + 1) + (b + 1)) → S,
+      (∏ i : Fin ((a + 1) + (b + 1)), Ts.k (ψ i) (ψ (i + 1))) *
+        (A (ψ 0) * B (ψ (Fin.natAdd (a + 1) (0 : Fin (b + 1)))))
+      ∂Measure.pi (fun _ : Fin ((a + 1) + (b + 1)) => Ts.ν)) =
+    ∫ x, ∫ y, A x * Ts.kPow a x y * (B y * Ts.kPow b y x) ∂Ts.ν ∂Ts.ν
+  exact twoPoint_fubini_fin Ts a b A B
 
 /-- **The two-point Feynman–Kac dictionary.** For `0 < t < n` and bounded observables
 `A B : S → ℝ`, the time-`(0,t)` correlation of the path measure is the kernel-composition
@@ -337,9 +772,9 @@ theorem twoPoint_dictionary (Ts : TransferSystem S) (n : ℕ) [NeZero n]
         (∫ x : ZMod n → S, Ts.pathDensity n x * (A (x 0) * B (x (t : ZMod n)))
           ∂Measure.pi (fun _ : ZMod n => Ts.ν)) =
       (Ts.partition n)⁻¹ *
-        ∫ x, ∫ y, A x * kernelPower Ts.ν Ts.k (t - 1) x y *
-          (B y * kernelPower Ts.ν Ts.k (n - t - 1) y x) ∂Ts.ν ∂Ts.ν
-    rw [← Ts.twoPoint_fubini n ht0 htn A B]
+        ∫ x, ∫ y, A x * Ts.kPow (t - 1) x y *
+          (B y * Ts.kPow (n - t - 1) y x) ∂Ts.ν ∂Ts.ν
+    rw [← twoPoint_fubini Ts n ht0 htn A B]
     congr 1
     rw [ENNReal.toReal_inv]
     rw [ENNReal.toReal_ofReal]

@@ -159,6 +159,13 @@ arcs into `kPow`. Fully generic over `(S, ν, k)`.
 **Full design + the maximal-generality discussion:**
 [`docs/transfer-construction.md`](docs/transfer-construction.md).
 
+**Possible future work — graph + measure ⟹ transfer matrix:** a general
+`LatticeTransferData → TransferSystem` constructor that builds the dictionary
+(and the OS state space) from a *time-layered lattice graph + local energy*,
+with reflection positivity **derived** from local symmetry/positivity
+hypotheses rather than re-proved per instance — see
+[`docs/transfer-system-from-graph.md`](docs/transfer-system-from-graph.md).
+
 ### Graph reflection positivity (FLS)
 
 The Freedman-Lovász-Schrijver framework (JAMS 2007) gives a

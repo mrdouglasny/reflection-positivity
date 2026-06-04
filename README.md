@@ -119,6 +119,53 @@ own transfer matrix. **Full details and an instantiation guide:
 (design rationale and ruled-out alternatives:
 [`docs/transfer-bridge-spec.md`](docs/transfer-bridge-spec.md)).
 
+### The Feynman–Kac trace dictionary (built, general)
+
+`ReflectionPositivity/TransferSystem.lean` proves the transfer-matrix /
+Feynman–Kac correspondence at its **natural generality and in the
+kernel-iterate (Fubini) form** — no abstract trace-class operator API
+needed, just iterated integrals of kernel products. A `TransferSystem S`
+is a single-time-slice space `(ν, k)` with a symmetric nonnegative
+transfer kernel `k` (plus σ-finiteness / integrability side-conditions);
+it induces the periodic path (Gibbs) measure on `ZMod n → S` with density
+`∏_t k(ψ_t, ψ_{t+1})`. Two theorems, **genuinely proved** (axioms
+`propext, Classical.choice, Quot.sound`; no correlation identity assumed
+as a hypothesis):
+
+* `partition_eq_trace` — `Z_n = ∫ x, kPow (n−1) x x dν`, where `kPow m` is
+  the `(m+1)`-fold kernel composition (the kernel of `Tᵐ⁺¹`). This is
+  `Z_n = Tr(Tⁿ)`.
+* `twoPoint_dictionary` —
+  `∫ A(ψ₀)·B(ψ_t) dμ_n = Z_n⁻¹ · ∫∫ A(x)·kPow_{t−1}(x,y)·B(y)·kPow_{n−t−1}(y,x) dν dν`,
+  i.e. `Tr(M_A Tᵗ M_B T^{n−t}) / Tr(Tⁿ)`.
+
+Proved by reindexing `ZMod n → Fin n` and peeling slices via
+`measurePreserving_piFinSuccAbove` + `integral_prod`, folding the open
+arcs into `kPow`. Fully generic over `(S, ν, k)`.
+
+**Which route to use.** These are two complementary builds:
+
+* The **`TransferConstruction`** (GNS) route above is OS reconstruction —
+  it works whenever the time translation `τ` preserves positive-time
+  observables, i.e. on the **half-infinite / `Nt→∞` cylinder** and the
+  continuum. (On a *finite periodic* torus `τ` does **not** preserve a
+  strict positive-time half-region, so the GNS transfer operator there is
+  ill-defined — established by vetting.)
+* The **`TransferSystem`** (kernel-iterate) route here is the one a
+  **finite periodic lattice** (e.g. pphi2's φ⁴₂ cylinder) instantiates:
+  set `k(x,y) = w(x)·G(x−y)·w(y)`, identify the lattice Gibbs measure with
+  the path measure, and read off the `Tⁿ`-trace correlations directly.
+
+**Full design + the maximal-generality discussion:**
+[`docs/transfer-construction.md`](docs/transfer-construction.md).
+
+**Possible future work — graph + measure ⟹ transfer matrix:** a general
+`LatticeTransferData → TransferSystem` constructor that builds the dictionary
+(and the OS state space) from a *time-layered lattice graph + local energy*,
+with reflection positivity **derived** from local symmetry/positivity
+hypotheses rather than re-proved per instance — see
+[`docs/transfer-system-from-graph.md`](docs/transfer-system-from-graph.md).
+
 ### Graph reflection positivity (FLS)
 
 The Freedman-Lovász-Schrijver framework (JAMS 2007) gives a
@@ -170,9 +217,12 @@ mature.
 * `TransferMatrix.lean` / `VarianceBound.lean` — the `GappedTransfer`
   structure and the geometric-series susceptibility bound
   `∑ |⟪v, Tⁿ v⟫| ≤ ‖v‖²/(1−gap)`.
-* `TransferConstruction.lean` — the OS transfer operator + Feynman–Kac
+* `TransferConstruction.lean` — the OS (GNS) transfer operator + Feynman–Kac
   bridge + `Lt`-uniform variance bound (see the section above and
   [`docs/transfer-construction.md`](docs/transfer-construction.md)).
+* `TransferSystem.lean` — the general kernel-iterate Feynman–Kac trace
+  dictionary (`partition_eq_trace`, `twoPoint_dictionary`) for a finite
+  periodic lattice; the route a concrete finite lattice instantiates.
 
 Each headline declaration's `#print axioms` is
 `[propext, Classical.choice, Quot.sound]` only. The graph / FLS

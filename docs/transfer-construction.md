@@ -100,6 +100,30 @@ and `reflectionCorrelation_susceptibility_le` is `[propext, Classical.choice, Qu
 only. The remaining work for any concrete consumer is the instantiation above (the gap and
 the operator-coincidence), which lives in the consumer project, not here.
 
+## Companion: the kernel-iterate dictionary (`TransferSystem.lean`) — the finite-lattice route
+
+The GNS construction above (`TransferConstruction.lean`) is OS reconstruction; it needs the
+time translation `τ` to preserve positive-time observables, which holds on the
+**half-infinite / `Nt→∞` cylinder** and the continuum, but **fails on a finite periodic
+torus** (no strict positive-time half-region is shift-stable — established by axiom vetting,
+2026-06-03). For a **finite periodic lattice** use the complementary, fully-proved
+`ReflectionPositivity/TransferSystem.lean` instead:
+
+* `TransferSystem S` = `(ν, k)` (symmetric nonnegative kernel + σ-finiteness/integrability
+  side-conditions) ⟹ periodic path measure on `ZMod n → S` with density `∏_t k(ψ_t,ψ_{t+1})`.
+* `kPow m` = the `(m+1)`-fold kernel composition (kernel of `Tᵐ⁺¹`).
+* `partition_eq_trace` : `Z_n = ∫ x, kPow (n−1) x x dν` (= `Tr Tⁿ`).
+* `twoPoint_dictionary` : `∫ A(ψ₀)·B(ψ_t) dμ_n = Z_n⁻¹·∫∫ A·kPow_{t−1}·B·kPow_{n−t−1}` (=
+  `Tr(M_A Tᵗ M_B T^{n−t})/Tr Tⁿ`).
+
+Both **genuinely proved** (axiom-clean; no correlation identity assumed as a hypothesis) by
+`ZMod→Fin` reindexing + `measurePreserving_piFinSuccAbove` peeling + `openChain_fold`, in the
+**kernel-iterate (Fubini) form** that needs no abstract trace-class operator API. A concrete
+finite lattice (pphi2's φ⁴₂ cylinder, `k(x,y)=w(x)·G(x−y)·w(y)`) instantiates this and reads
+off its `Tⁿ`-trace correlations directly. *(Instantiation caveat: the integrability fields
+currently quantify over all `A,B`; they may need refactoring to per-test-function hypotheses
+so a concrete instance can satisfy them without vacuity.)*
+
 ## References
 
 * K. Osterwalder, R. Schrader, *Axioms for Euclidean Green's functions I, II* (1973, 1975).

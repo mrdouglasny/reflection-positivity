@@ -217,6 +217,12 @@ mature.
 * `TransferMatrix.lean` / `VarianceBound.lean` — the `GappedTransfer`
   structure and the geometric-series susceptibility bound
   `∑ |⟪v, Tⁿ v⟫| ≤ ‖v‖²/(1−gap)`.
+* `AveragedSusceptibility.lean` / `ConnectedTwoPoint.lean` — the Layer-B4
+  averaged-susceptibility engine: the periodic wrap-around geometric bound
+  `Σ_d (r^d + r^{Nt−d}) ≤ (1+r)/(1−r)` (`geom_wrap_sum_le`,
+  `averaged_susceptibility_bound`) and the connected two-point bound from the
+  gap via the rank-1 ground projection (`connected_two_point_le`,
+  `connected_susceptibility_le : Σ_d |⟪Ω,Φ Tᵈ Φ Ω⟫ − ⟪Ω,ΦΩ⟫²| ≤ ‖P₁ΦΩ‖²/(1−gap)`).
 * `TransferConstruction.lean` — the OS (GNS) transfer operator + Feynman–Kac
   bridge + `Lt`-uniform variance bound (see the section above and
   [`docs/transfer-construction.md`](docs/transfer-construction.md)).

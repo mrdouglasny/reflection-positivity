@@ -67,7 +67,7 @@ theorem geom_wrap_sum_le (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) (Nt : ℕ) :
     _ = (1 + r) / (1 - r) := by rw [div_eq_mul_inv]; ring
 
 /-- `(1+x)/(1-x)` is monotone on `[0,1)`. -/
-private theorem one_add_div_one_sub_mono {x y : ℝ} (hx : 0 ≤ x) (hxy : x ≤ y) (hy : y < 1) :
+private theorem one_add_div_one_sub_mono {x y : ℝ} (_hx : 0 ≤ x) (hxy : x ≤ y) (hy : y < 1) :
     (1 + x) / (1 - x) ≤ (1 + y) / (1 - y) := by
   have hx1 : 0 < 1 - x := by linarith
   have hy1 : 0 < 1 - y := by linarith
@@ -86,7 +86,7 @@ wrap-around geometric series, with all rates bounded by the gap `γ`, is bounded
 `((1+γ)/(1-γ))·Σ b` — uniformly in the time extent `Nt`. With `b_k = |⟨Ω|Φ|e_k⟩|²` and
 `gam_k = λ_k/λ₀`, the left side is `Σ_d` (connected two-point at separation `d`) and the bound
 is the `Nt`-uniform averaged susceptibility. -/
-theorem averaged_susceptibility_bound (γ : ℝ) (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (Nt : ℕ)
+theorem averaged_susceptibility_bound (γ : ℝ) (_hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (Nt : ℕ)
     {ι : Type*} (s : Finset ι) (b gam : ι → ℝ) (hb : ∀ k ∈ s, 0 ≤ b k)
     (hgam : ∀ k ∈ s, 0 ≤ gam k ∧ gam k ≤ γ) :
     ∑ d ∈ Finset.range Nt, ∑ k ∈ s, b k * (gam k ^ d + gam k ^ (Nt - d)) ≤

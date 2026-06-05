@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael R. Douglas
 -/
 import ReflectionPositivity.TransferMatrix
+import ReflectionPositivity.VarianceBound
 
 /-!
 # Connected two-point bound from the spectral gap (rank-1 projection)
@@ -51,6 +52,25 @@ theorem vacuum_add_vacuumPerp (v : H) :
     ⟪G.vacuum, v⟫ • G.vacuum + G.vacuumPerp v = v := by
   simp only [vacuumPerp]; abel
 
+/-- **Two-point split.** The raw vacuum two-point splits into the disconnected product plus the
+connected part `⟪P₁ M_A Ω, Tᵈ (P₁ M_B Ω)⟫` (the genuinely `d`-dependent part). -/
+theorem two_point_split (hΩ : ‖G.vacuum‖ = 1)
+    (MA MB : H →L[ℝ] H) (hMA : ∀ x y, ⟪MA x, y⟫ = ⟪x, MA y⟫) (d : ℕ) :
+    ⟪G.vacuum, MA ((G.T ^ d) (MB G.vacuum))⟫
+      = ⟪G.vacuum, MA G.vacuum⟫ * ⟪G.vacuum, MB G.vacuum⟫
+        + ⟪G.vacuumPerp (MA G.vacuum), (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ := by
+  have hwperp : ⟪G.vacuum, (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ = 0 :=
+    G.inner_vacuum_T_pow_eq_zero (G.inner_vacuum_vacuumPerp hΩ (MB G.vacuum)) d
+  have h1 : ⟪MA G.vacuum, (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫
+      = ⟪G.vacuumPerp (MA G.vacuum), (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ := by
+    conv_lhs => rw [← G.vacuum_add_vacuumPerp (MA G.vacuum)]
+    rw [inner_add_left, real_inner_smul_left, hwperp]; simp
+  rw [← hMA G.vacuum ((G.T ^ d) (MB G.vacuum))]
+  conv_lhs => rw [← G.vacuum_add_vacuumPerp (MB G.vacuum)]
+  rw [map_add, map_smul, G.T_pow_vacuum d, inner_add_right, real_inner_smul_right, h1,
+    real_inner_comm (MA G.vacuum) G.vacuum]
+  ring
+
 /-- **Connected two-point bound.** The connected vacuum two-point at separation `d` decays like
 `γᵈ` times the product of the vacuum-orthogonal observable norms. -/
 theorem connected_two_point_le (hΩ : ‖G.vacuum‖ = 1)
@@ -58,32 +78,34 @@ theorem connected_two_point_le (hΩ : ‖G.vacuum‖ = 1)
     |⟪G.vacuum, MA ((G.T ^ d) (MB G.vacuum))⟫
         - ⟪G.vacuum, MA G.vacuum⟫ * ⟪G.vacuum, MB G.vacuum⟫|
       ≤ G.gap ^ d * (‖G.vacuumPerp (MA G.vacuum)‖ * ‖G.vacuumPerp (MB G.vacuum)‖) := by
-  have hperpB : ⟪G.vacuum, G.vacuumPerp (MB G.vacuum)⟫ = 0 :=
-    G.inner_vacuum_vacuumPerp hΩ (MB G.vacuum)
-  have hwperp : ⟪G.vacuum, (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ = 0 :=
-    G.inner_vacuum_T_pow_eq_zero hperpB d
-  -- drop the vacuum component of `MA Ω` against the orthogonal iterate
-  have h1 : ⟪MA G.vacuum, (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫
-      = ⟪G.vacuumPerp (MA G.vacuum), (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ := by
-    conv_lhs => rw [← G.vacuum_add_vacuumPerp (MA G.vacuum)]
-    rw [inner_add_left, real_inner_smul_left, hwperp]
-    simp
-  -- expand the raw two-point
-  have key : ⟪G.vacuum, MA ((G.T ^ d) (MB G.vacuum))⟫
-      = ⟪G.vacuum, MA G.vacuum⟫ * ⟪G.vacuum, MB G.vacuum⟫
-        + ⟪G.vacuumPerp (MA G.vacuum), (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫ := by
-    rw [← hMA G.vacuum ((G.T ^ d) (MB G.vacuum))]
-    conv_lhs => rw [← G.vacuum_add_vacuumPerp (MB G.vacuum)]
-    rw [map_add, map_smul, G.T_pow_vacuum d, inner_add_right, real_inner_smul_right, h1,
-      real_inner_comm (MA G.vacuum) G.vacuum]
-    ring
-  rw [key, add_sub_cancel_left]
+  rw [G.two_point_split hΩ MA MB hMA d, add_sub_cancel_left]
   calc |⟪G.vacuumPerp (MA G.vacuum), (G.T ^ d) (G.vacuumPerp (MB G.vacuum))⟫|
       ≤ ‖G.vacuumPerp (MA G.vacuum)‖ * ‖(G.T ^ d) (G.vacuumPerp (MB G.vacuum))‖ :=
         abs_real_inner_le_norm _ _
     _ ≤ ‖G.vacuumPerp (MA G.vacuum)‖ * (G.gap ^ d * ‖G.vacuumPerp (MB G.vacuum)‖) :=
-        mul_le_mul_of_nonneg_left (G.norm_T_pow_le hperpB d) (norm_nonneg _)
+        mul_le_mul_of_nonneg_left
+          (G.norm_T_pow_le (G.inner_vacuum_vacuumPerp hΩ (MB G.vacuum)) d) (norm_nonneg _)
     _ = G.gap ^ d * (‖G.vacuumPerp (MA G.vacuum)‖ * ‖G.vacuumPerp (MB G.vacuum)‖) := by ring
+
+/-- **Observable susceptibility bound.** Summing the connected two-point of a self-adjoint
+observable `Φ` over all separations is bounded by `‖P₁ Φ Ω‖²/(1-γ)` — the variance bound from the
+gap, in observable form. (Stitches `two_point_split` with the proved `susceptibility_le`.) -/
+theorem connected_susceptibility_le (hΩ : ‖G.vacuum‖ = 1)
+    (Φ : H →L[ℝ] H) (hΦ : ∀ x y, ⟪Φ x, y⟫ = ⟪x, Φ y⟫) (N : ℕ) :
+    ∑ d ∈ Finset.range N,
+        |⟪G.vacuum, Φ ((G.T ^ d) (Φ G.vacuum))⟫ - ⟪G.vacuum, Φ G.vacuum⟫ ^ 2|
+      ≤ ‖G.vacuumPerp (Φ G.vacuum)‖ ^ 2 / (1 - G.gap) := by
+  have hv : ⟪G.vacuum, G.vacuumPerp (Φ G.vacuum)⟫ = 0 :=
+    G.inner_vacuum_vacuumPerp hΩ (Φ G.vacuum)
+  have hterm : ∀ d, ⟪G.vacuum, Φ ((G.T ^ d) (Φ G.vacuum))⟫ - ⟪G.vacuum, Φ G.vacuum⟫ ^ 2
+      = ⟪G.vacuumPerp (Φ G.vacuum), (G.T ^ d) (G.vacuumPerp (Φ G.vacuum))⟫ := by
+    intro d; rw [G.two_point_split hΩ Φ Φ hΦ d, sq]; ring
+  calc ∑ d ∈ Finset.range N,
+        |⟪G.vacuum, Φ ((G.T ^ d) (Φ G.vacuum))⟫ - ⟪G.vacuum, Φ G.vacuum⟫ ^ 2|
+      = ∑ d ∈ Finset.range N,
+          |⟪G.vacuumPerp (Φ G.vacuum), (G.T ^ d) (G.vacuumPerp (Φ G.vacuum))⟫| := by
+        exact Finset.sum_congr rfl (fun d _ => by rw [hterm d])
+    _ ≤ ‖G.vacuumPerp (Φ G.vacuum)‖ ^ 2 / (1 - G.gap) := G.susceptibility_le hv N
 
 end GappedTransfer
 

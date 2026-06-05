@@ -13,3 +13,5 @@ import ReflectionPositivity.Chessboard.Chessboard
 import ReflectionPositivity.Graph.ConnectionMatrix
 import ReflectionPositivity.Graph.HomomorphismFunction
 import ReflectionPositivity.Graph.FreedmanLovaszSchrijver
+import ReflectionPositivity.AveragedSusceptibility
+import ReflectionPositivity.ConnectedTwoPoint

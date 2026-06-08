@@ -364,3 +364,26 @@ spectral theorem.
    smoke-test of the framework (it's the simplest nontrivial
    consequence of the definition).
 5. Decision point: continue, adjust scope, or rethink.
+
+
+---
+
+## Goal requested by `random-fields/graphons` (Tier-C representability)
+
+graphons' Tier-C **representability** (Lovász–Szegedy: a graph parameter is the homomorphism density
+`t(·,W)` of a graphon iff it is multiplicative + normalized + **reflection-positive**, i.e. its
+connection matrices `M(f,k)` are PSD) is to be **discharged here**, since it is exactly the
+Freedman–Lovász–Schrijver / connection-matrix RP program of this repo. Concretely:
+
+- `Graph.FLS.main` (above, FLS 2007 Thm 2.4) gives the **finite weighted-graph** version
+  `f = Graph.homomorphismFunction H`.
+- graphons lifts `H ↦ graphon` via its **cut-distance compactness/limit** (now proved in
+  `random-fields/graphons`, `GraphonSpace ℝ unitMeasure` compact, modulo 2 measure-theoretic axioms),
+  yielding the continuous (graphon) statement.
+
+**Cross-repo contract.** graphons currently AXIOMATIZES this characterization (a true classical theorem)
+as the single *algebraic* member of its axiom ledger (its other 2 axioms are measure-theoretic, for
+compactness), and CITES this repo as the proof site. When `Graph.FLS.main` lands here, graphons'
+representability axiom is dischargeable (or graphons may depend on this repo directly). **Goal: prove
+`Graph.FLS.main`** (blocked on the finite-dim commutative C*-algebra structure theorem, Mathlib WIP) and
+expose a graphon-level corollary for graphons to consume.

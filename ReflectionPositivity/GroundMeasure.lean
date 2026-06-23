@@ -158,4 +158,23 @@ theorem memLp_mul_omega_of_groundMeasure {ν : Measure S} {Ω : S → ℝ}
   rwa [hasFiniteIntegral_iff_ofReal
       (Filter.Eventually.of_forall (fun x => sq_nonneg _))] at h
 
+/-! ## The isometric embedding `W : L²(μ_Ω) → L²(ν)`
+
+The integral identity + the `MemLp` lift assemble into a `LinearIsometry`
+from `L²(μ_Ω)` to `L²(ν)` sending `[f] ↦ [f · Ω]` (on representatives).
+When `Ω > 0` ν-a.e., this isometry is **unitary** (i.e., a `LinearIsometryEquiv`);
+that strengthening is in a follow-up — this file establishes the
+isometric embedding direction. -/
+
+/-- The auxiliary Lp element `u · Ω : Lp ℝ 2 ν` built from a representative
+of `u : Lp ℝ 2 (groundMeasure ν Ω)` via the `mk`-trick (the strongly-
+measurable representative supplied by `AEStronglyMeasurable.mk`). -/
+private noncomputable def groundIsometry_toLp {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) (u : Lp ℝ 2 (groundMeasure ν Ω)) : Lp ℝ 2 ν :=
+  let u_mk := (Lp.aestronglyMeasurable u).mk u
+  let hu_mk_meas := (Lp.aestronglyMeasurable u).stronglyMeasurable_mk.measurable
+  let hu_mk_memLp : MemLp u_mk 2 (groundMeasure ν Ω) :=
+    (Lp.memLp u).ae_eq (Lp.aestronglyMeasurable u).ae_eq_mk
+  (memLp_mul_omega_of_groundMeasure hΩ_meas hu_mk_meas hu_mk_memLp).toLp _
+
 end ReflectionPositivity

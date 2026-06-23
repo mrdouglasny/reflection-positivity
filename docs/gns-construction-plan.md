@@ -206,8 +206,9 @@ kernel's HS norm (`asymTransferKernel` is L² as a kernel on `ℝ^Ns × ℝ^Ns`)
   Bounded linear; proof of well-definedness uses `Ω > 0` and the L²-bound
   of `T^t` (already proved).
 * Prove `U_t 1 = 1` (Markov; uses `T^t Ω = λ₀^t Ω`).
-* Prove `‖U_t‖_op ≤ 1` (contraction; needs Cauchy-Schwarz + the L²-Ω
-  weighting).
+* Prove `‖U_t‖_op ≤ 1` (contraction; by `W`-unitary transport from
+  `hT_normContract` / `GappedTransfer`. The eigenvector / weighting
+  alone is NOT enough — see "Required additional hypotheses" above).
 * (Optional) Prove `U_t · U_s = U_{t+s}` (semigroup).
 
 ### Piece D — Spectral gap of `U_t` on `1`-orthogonal complement (~100-150 lines)
@@ -255,7 +256,25 @@ theorem pathMeasure_connected_two_point_finite_periodic_bound
   7. **The R·R term and the finite-volume one-point corrections** are bundled into `hRem.C_rem`. The doubly-perp R·R term needs trace-class / HS norm control such as `‖P₁ M_A P₁‖_HS · ‖P₁ M_B P₁‖_HS`, NOT just the ground-perp norms `‖P₁ M_A Ω‖`. The bridge takes `C_rem` as a hypothesis; pphi2's concrete instance derives it from the explicit Gaussian-kernel HS norm.
   8. Bridge `vacuumPerp_{L²(μ_Ω)} ↔ vacuumPerp_{L²(ν)}` via `W` unitary.
 
-The `RemainderHypothesis` abstraction (`C_rem` + the integrability/HS-bound proof obligation) is what an abstract `TransferSystem` user must supply. In pphi2's instance, the Gaussian kernel makes this explicit.
+The `RemainderHypothesis` abstraction (`C_rem` + the integrability/HS-bound
+proof obligation) is what an abstract `TransferSystem` user must supply.
+Field sketch:
+
+```lean
+structure RemainderHypothesis (A B : MultiplicationCLMContract Ts.ν)
+    (Ts : TransferSystem S) (Ω : S → ℝ) (λ₀ γ : ℝ) where
+  C_rem : ℝ
+  C_rem_nonneg : 0 ≤ C_rem
+  remainder_bound : ∀ (Nt : ℕ) [NeZero Nt],
+    (the R·R + denominator + finite-volume one-point trace estimate)
+      ≤ C_rem * γ ^ Nt
+```
+
+Bundling the bound itself (not just the constant) keeps the contract
+honest — any consumer must demonstrate the combined finite-periodic
+remainder estimate, not just guess a constant. In pphi2's instance,
+the Gaussian transfer kernel's explicit HS norm closes
+`remainder_bound` directly.
 
 * **Concretely needs**: a kernel-level analog of the rank-1 split (signed-kernel `R_m := kPow_m - λ₀^{m+1} · Ω(x)Ω(y)`) with op-norm decay tracked through L²(ν) integration. The pphi2-side `asymKernelPerp_*` lemmas (still to be written) would be the concrete witness; in RP it's stated abstractly via the `MultiplicationCLMContract` + op-norm-gap inputs.
 
@@ -362,10 +381,13 @@ route anyway.
   covariance subtracts finite-volume means, NOT GNS/vacuum means; these
   agree only up to a corresponding finite-volume correction. The Piece
   E1 statement above subtracts the path-measure one-points correctly;
-  the correction is absorbed into the wrap-around term.
+  the correction is absorbed into `hRem.C_rem · γ^Nt` (it does not fit
+  inside the `C_perp` wrap-around term).
 * **Correction constants depend on observable norms** and on whatever
   trace/HS class controls the return leg — not just functions of `γ`.
-  The Piece E1 statement above tracks this via `‖vacuumPerp(W⁻¹ M_A W) 1‖`.
+  The Piece E1 statement tracks the one-perp constants via the
+  vacuum-perp norms `‖vacuumPerp_{L²(ν)} (A · Ω)‖` and the trace/HS
+  remainder via `hRem.C_rem`.
 * **Unbounded pphi2 slice observables** (linear `⟨g,·⟩` are unbounded
   on `L²(ν)`) are handled by Piece 1's truncation + Piece 3's `K → ∞`
   DCT limit **downstream** of this bridge. The abstract bridge here is

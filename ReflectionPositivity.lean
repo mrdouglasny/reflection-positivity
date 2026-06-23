@@ -22,3 +22,4 @@ import ReflectionPositivity.GroundMeasure
 import ReflectionPositivity.MultiplicationCLM
 import ReflectionPositivity.GroundSemigroup
 import ReflectionPositivity.GroundGap
+import ReflectionPositivity.GroundIdentity

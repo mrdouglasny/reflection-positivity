@@ -24,3 +24,4 @@ import ReflectionPositivity.GroundSemigroup
 import ReflectionPositivity.GroundGap
 import ReflectionPositivity.GroundIdentity
 import ReflectionPositivity.GroundBridge
+import ReflectionPositivity.GroundSusceptibility

@@ -292,7 +292,7 @@ the Gaussian transfer kernel's explicit HS norm closes
 Per codex review 2026-06-22, the original linear chain can be loosened:
 
 ```
-A (groundMeasure) ──┐
+A (groundMeasure + groundIsometry) ──┐
                     ├──► E0 (exact identity) ──► E1 (finite-periodic bridge) ──► F (connected) 
 B (CLM contract) ──┐│                                          │
                    ┘└──► C (semigroup) ──► D (gap on 1⊥) ──────┘

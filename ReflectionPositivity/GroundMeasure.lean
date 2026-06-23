@@ -115,4 +115,47 @@ theorem integral_sq_groundMeasure_eq (ν : Measure S) (Ω : S → ℝ)
   show (ENNReal.ofReal (Ω x ^ 2)).toReal • f x ^ 2 = (f x * Ω x) ^ 2
   rw [ENNReal.toReal_ofReal (sq_nonneg _), smul_eq_mul]; ring
 
+/-- The same L²-norm identity in `lintegral` (extended-nonneg-real) form. The
+ENNReal version is more directly usable for the `MemLp` reasoning below. -/
+theorem lintegral_sq_groundMeasure_eq (ν : Measure S) (Ω : S → ℝ)
+    (hΩ_meas : Measurable Ω) (f : S → ℝ) :
+    ∫⁻ x, ENNReal.ofReal (f x ^ 2) ∂(groundMeasure ν Ω)
+      = ∫⁻ x, ENNReal.ofReal ((f x * Ω x) ^ 2) ∂ν := by
+  unfold groundMeasure
+  have hmsr : Measurable (fun x => ENNReal.ofReal (Ω x ^ 2)) :=
+    ENNReal.measurable_ofReal.comp (hΩ_meas.pow_const 2)
+  have hft : ∀ᵐ x ∂ν, ENNReal.ofReal (Ω x ^ 2) < ⊤ :=
+    Filter.Eventually.of_forall (fun x => ENNReal.ofReal_lt_top)
+  have key := lintegral_withDensity_eq_lintegral_mul_non_measurable ν hmsr hft
+      (fun x => ENNReal.ofReal (f x ^ 2))
+  rw [key]
+  refine lintegral_congr_ae (Filter.Eventually.of_forall (fun x => ?_))
+  show (ENNReal.ofReal (Ω x ^ 2) * ENNReal.ofReal (f x ^ 2))
+      = ENNReal.ofReal ((f x * Ω x) ^ 2)
+  rw [← ENNReal.ofReal_mul (sq_nonneg _)]; congr 1; ring
+
+/-- **Multiplication-by-Ω lifts L²(μ_Ω) into L²(ν).** For any measurable function
+`f` that is `MemLp 2` w.r.t. the ground measure, the pointwise product `f · Ω`
+is `MemLp 2` w.r.t. `ν`. This is the integrability witness for the isometry
+`W : L²(μ_Ω) → L²(ν)`, `W f := f · Ω`.
+
+The `Measurable f` hypothesis (rather than `AEStronglyMeasurable f (groundMeasure ν Ω)`)
+sidesteps the case where `Ω` vanishes on a `ν`-positive set, in which case
+the ground measure and `ν` are not equivalent. When `Ω > 0` `ν`-a.e. the two
+hypotheses agree and `Measurable f` can be relaxed via `mk`. -/
+theorem memLp_mul_omega_of_groundMeasure {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) {f : S → ℝ} (hf_meas : Measurable f)
+    (hf : MemLp f 2 (groundMeasure ν Ω)) :
+    MemLp (fun x => f x * Ω x) 2 ν := by
+  have hmsr_fΩ : AEStronglyMeasurable (fun x => f x * Ω x) ν :=
+    (hf_meas.mul hΩ_meas).aestronglyMeasurable
+  rw [memLp_two_iff_integrable_sq hmsr_fΩ]
+  refine ⟨(hmsr_fΩ.pow 2), ?_⟩
+  -- HasFiniteIntegral ((f * Ω)^2) ν via the L²-norm identity from above.
+  rw [hasFiniteIntegral_iff_ofReal (Filter.Eventually.of_forall (fun x => sq_nonneg _))]
+  rw [← lintegral_sq_groundMeasure_eq ν Ω hΩ_meas f]
+  have h := hf.integrable_sq.hasFiniteIntegral
+  rwa [hasFiniteIntegral_iff_ofReal
+      (Filter.Eventually.of_forall (fun x => sq_nonneg _))] at h
+
 end ReflectionPositivity

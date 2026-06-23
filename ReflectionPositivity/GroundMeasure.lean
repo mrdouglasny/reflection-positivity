@@ -177,4 +177,137 @@ private noncomputable def groundIsometry_toLp {ν : Measure S} {Ω : S → ℝ}
     (Lp.memLp u).ae_eq (Lp.aestronglyMeasurable u).ae_eq_mk
   (memLp_mul_omega_of_groundMeasure hΩ_meas hu_mk_meas hu_mk_memLp).toLp _
 
+/-- Pointwise representative of `groundIsometry_toLp`: the result, as a function
+on `S`, equals `(mk u) · Ω` `ν`-a.e. -/
+private theorem groundIsometry_toLp_coeFn {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) (u : Lp ℝ 2 (groundMeasure ν Ω)) :
+    (⇑(groundIsometry_toLp hΩ_meas u) : S → ℝ) =ᵐ[ν]
+      fun x => (Lp.aestronglyMeasurable u).mk u x * Ω x := by
+  unfold groundIsometry_toLp
+  exact MemLp.coeFn_toLp _
+
+/-- Pointwise conversion between the `eLpNorm` L² integrand and `ofReal (· ^ 2)`
+for real-valued functions. -/
+private theorem enorm_rpow_two_eq_ofReal_sq (a : ℝ) :
+    ‖a‖ₑ ^ (2 : ℝ) = ENNReal.ofReal (a ^ 2) := by
+  rw [Real.enorm_eq_ofReal_abs, ENNReal.rpow_two, pow_two]
+  rw [← ENNReal.ofReal_mul (abs_nonneg a)]
+  congr 1
+  rw [← sq]
+  exact sq_abs a
+
+/-- The L² `eLpNorm` identity underlying `groundIsometry`. -/
+private theorem eLpNorm_mul_omega_eq_ground {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) (g : S → ℝ) :
+    eLpNorm (fun x => g x * Ω x) 2 ν =
+      eLpNorm g 2 (groundMeasure ν Ω) := by
+  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top]
+  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal two_ne_zero ENNReal.ofNat_ne_top]
+  simp only [ENNReal.toReal_ofNat]
+  congr 1
+  calc
+    (∫⁻ x, ‖g x * Ω x‖ₑ ^ (2 : ℝ) ∂ν)
+        = ∫⁻ x, ENNReal.ofReal ((g x * Ω x) ^ 2) ∂ν := by
+          apply lintegral_congr_ae
+          filter_upwards [] with x
+          exact enorm_rpow_two_eq_ofReal_sq (g x * Ω x)
+    _ = ∫⁻ x, ENNReal.ofReal (g x ^ 2) ∂(groundMeasure ν Ω) := by
+          rw [← lintegral_sq_groundMeasure_eq ν Ω hΩ_meas g]
+    _ = ∫⁻ x, ‖g x‖ₑ ^ (2 : ℝ) ∂(groundMeasure ν Ω) := by
+          apply lintegral_congr_ae
+          filter_upwards [] with x
+          exact (enorm_rpow_two_eq_ofReal_sq (g x)).symm
+
+/-- The ground-state transform as a linear isometry
+`W : L²(groundMeasure ν Ω) → L²(ν)`, represented pointwise by
+`(W f) x = f x * Ω x`. -/
+noncomputable def groundIsometry {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) :
+    Lp ℝ 2 (groundMeasure ν Ω) →ₗᵢ[ℝ] Lp ℝ 2 ν where
+  toFun := groundIsometry_toLp hΩ_meas
+  map_add' := by
+    intro u v
+    ext1
+    have hdens_meas : Measurable (fun x => ENNReal.ofReal (Ω x ^ 2)) :=
+      ENNReal.measurable_ofReal.comp (hΩ_meas.pow_const 2)
+    have hmk_add_ground :
+        (fun x => (Lp.aestronglyMeasurable (u + v)).mk (u + v) x)
+          =ᵐ[groundMeasure ν Ω]
+        fun x => (Lp.aestronglyMeasurable u).mk u x +
+          (Lp.aestronglyMeasurable v).mk v x := by
+      filter_upwards [(Lp.aestronglyMeasurable (u + v)).ae_eq_mk.symm,
+        (Lp.aestronglyMeasurable u).ae_eq_mk.symm,
+        (Lp.aestronglyMeasurable v).ae_eq_mk.symm,
+        Lp.coeFn_add u v] with x huv_mk hu_mk hv_mk huv
+      rw [huv_mk, huv, Pi.add_apply, hu_mk, hv_mk]
+    have hmk_add_nu :=
+      (ae_withDensity_iff hdens_meas).1 (by simpa [groundMeasure] using hmk_add_ground)
+    filter_upwards [groundIsometry_toLp_coeFn hΩ_meas (u + v),
+      groundIsometry_toLp_coeFn hΩ_meas u,
+      groundIsometry_toLp_coeFn hΩ_meas v,
+      Lp.coeFn_add (groundIsometry_toLp hΩ_meas u) (groundIsometry_toLp hΩ_meas v),
+      hmk_add_nu] with x huv hu hv hadd hmk_add
+    rw [huv, hadd, Pi.add_apply, hu, hv]
+    by_cases hΩx : Ω x = 0
+    · simp [hΩx]
+    · calc
+        (Lp.aestronglyMeasurable (u + v)).mk (u + v) x * Ω x
+            = ((Lp.aestronglyMeasurable u).mk u x +
+                (Lp.aestronglyMeasurable v).mk v x) * Ω x := by
+              congr 1
+              exact hmk_add (ne_of_gt (ENNReal.ofReal_pos.2 (sq_pos_of_ne_zero hΩx)))
+        _ = (Lp.aestronglyMeasurable u).mk u x * Ω x +
+              (Lp.aestronglyMeasurable v).mk v x * Ω x := by
+              ring
+  map_smul' := by
+    intro r u
+    ext1
+    have hdens_meas : Measurable (fun x => ENNReal.ofReal (Ω x ^ 2)) :=
+      ENNReal.measurable_ofReal.comp (hΩ_meas.pow_const 2)
+    have hmk_smul_ground :
+        (fun x => (Lp.aestronglyMeasurable (r • u)).mk (r • u) x)
+          =ᵐ[groundMeasure ν Ω]
+        fun x => r * (Lp.aestronglyMeasurable u).mk u x := by
+      filter_upwards [(Lp.aestronglyMeasurable (r • u)).ae_eq_mk.symm,
+        (Lp.aestronglyMeasurable u).ae_eq_mk.symm,
+        Lp.coeFn_smul r u] with x hru_mk hu_mk hsmul
+      rw [hru_mk, hsmul, Pi.smul_apply, hu_mk]
+      simp [smul_eq_mul]
+    have hmk_smul_nu :=
+      (ae_withDensity_iff hdens_meas).1 (by simpa [groundMeasure] using hmk_smul_ground)
+    filter_upwards [groundIsometry_toLp_coeFn hΩ_meas (r • u),
+      groundIsometry_toLp_coeFn hΩ_meas u,
+      Lp.coeFn_smul r (groundIsometry_toLp hΩ_meas u),
+      hmk_smul_nu] with x hru hu hsmul hmk_smul
+    rw [RingHom.id_apply, hru, hsmul, Pi.smul_apply, hu]
+    by_cases hΩx : Ω x = 0
+    · simp [hΩx]
+    · calc
+        (Lp.aestronglyMeasurable (r • u)).mk (r • u) x * Ω x
+            = (r * (Lp.aestronglyMeasurable u).mk u x) * Ω x := by
+              congr 1
+              exact hmk_smul (ne_of_gt (ENNReal.ofReal_pos.2 (sq_pos_of_ne_zero hΩx)))
+        _ = r • ((Lp.aestronglyMeasurable u).mk u x * Ω x) := by
+              ring
+  norm_map' := by
+    intro u
+    rw [Lp.norm_def, Lp.norm_def]
+    congr 1
+    calc
+      eLpNorm (groundIsometry_toLp hΩ_meas u) 2 ν
+          = eLpNorm (fun x => (Lp.aestronglyMeasurable u).mk u x * Ω x) 2 ν :=
+            eLpNorm_congr_ae (groundIsometry_toLp_coeFn hΩ_meas u)
+      _ = eLpNorm (fun x => (Lp.aestronglyMeasurable u).mk u x) 2 (groundMeasure ν Ω) :=
+            eLpNorm_mul_omega_eq_ground hΩ_meas _
+      _ = eLpNorm u 2 (groundMeasure ν Ω) :=
+            eLpNorm_congr_ae (Lp.aestronglyMeasurable u).ae_eq_mk.symm
+
+/-- Pointwise representative of `groundIsometry`: the result, as a function on
+`S`, equals `(mk u) · Ω` `ν`-a.e. -/
+theorem groundIsometry_coeFn {ν : Measure S} {Ω : S → ℝ}
+    (hΩ_meas : Measurable Ω) (u : Lp ℝ 2 (groundMeasure ν Ω)) :
+    (⇑(groundIsometry hΩ_meas u) : S → ℝ) =ᵐ[ν]
+      fun x => (Lp.aestronglyMeasurable u).mk u x * Ω x :=
+  groundIsometry_toLp_coeFn hΩ_meas u
+
 end ReflectionPositivity

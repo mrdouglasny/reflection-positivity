@@ -98,28 +98,52 @@ The cleanest statement is in **connected** form:
 theorem pathMeasure_connected_two_point_finite_periodic_bound
     (Ts : TransferSystem S) (Ω : S → ℝ) (λ₀ γ : ℝ)
     (hΩ_eigen) (hΩ_norm) (hΩ_pos)
-    (hT_bdd) (hT_normContract) (hT_positive)  -- the hypotheses above
+    (hT_bdd) (hT_normContract) (hT_positive)
     (hΩ_topGap : ∀ v, ⟪Ω,v⟫_{L²(ν)} = 0 → ‖T̂ v‖ ≤ γ · ‖v‖) (hγ : γ ∈ [0,1))
-    (A B : S → ℝ) (hA_bdd) (hB_bdd)
+    (A B : MultiplicationCLMContract Ts.ν)
     (Nt : ℕ) [NeZero Nt] (t : ZMod Nt) (ht : 0 < t.val) (htn : t.val < Nt) :
-    |∫ A(ψ 0) * B(ψ t) ∂(Ts.pathMeasure Nt)
-        - (∫ A ∂(pathMeasure_1pt Nt)) * (∫ B ∂(pathMeasure_1pt Nt))|
-      ≤ C_AB · (γ^t.val + γ^(Nt - t.val))
+    |∫ A.A(ψ 0) * B.A(ψ t) ∂(Ts.pathMeasure Nt)
+        - (∫ A.A(ψ 0) ∂(Ts.pathMeasure Nt)) * (∫ B.A(ψ t) ∂(Ts.pathMeasure Nt))|
+      ≤ C_perp(A, B) · (γ^t.val + γ^(Nt - t.val))     -- the two one-perp-leg
+        + C_rem(A, B) · γ^Nt                          -- R·R + denominator + one-point corrections
 ```
 
-where `C_AB` depends on `A, B` only through ground-perp norms (e.g.,
-`‖P₁ (A · Ω)‖_{L²(ν)} · ‖P₁ (B · Ω)‖_{L²(ν)}`).
+where:
 
-**Why this is `Nt`-uniform after summing**: the susceptibility
-`Σ_{t=0..Nt-1} (γ^t + γ^{Nt - t}) = 2·(1 - γ^Nt)/(1 - γ) ≤ 2/(1 - γ)`,
-bounded uniformly in `Nt`. This is exactly the form that
-`AveragedSusceptibility.geom_wrap_sum_le` already handles.
+* **`C_perp(A, B) := ‖P₁_{L²(ν)} (A · Ω)‖ · ‖P₁_{L²(ν)} (B · Ω)‖`** controls
+  the two **one-perp-leg** terms `P₀·R` and `R·P₀` (from the rank-1
+  expansion `T̂^t = P₀ + R^t`, `T̂^{Nt-t} = P₀ + R^{Nt-t}`). This is the
+  ground-perp norm `connected_two_point_le` directly supplies.
 
-The pre-connected raw-comparison form would be
-`≤ C · (γ^(Nt - t) + γ^Nt)` (since the comparison replaces the long
-return leg `T̂^{Nt - t}` by `P₀`); the connected form above is
-strictly cleaner for the B2 use because the one-point subtractions
-also cancel the dominant `λ₀^Nt P₀ P₀ / λ₀^Nt = ⟨Ω,M_A Ω⟩·⟨Ω,M_B Ω⟩` term.
+* **`C_rem(A, B)`** controls the **R·R** doubly-perp term plus the
+  **denominator + finite-volume one-point corrections** that don't cancel
+  cleanly under the `Z_n = λ₀^n + Tr(T'^n)` split. **Per codex review
+  2026-06-23**, this is NOT bounded by `C_perp` alone — the R·R term has
+  geometric size `γ^Nt` with a constant involving excited-subspace /
+  trace / HS quantities (e.g., `‖P₁ M_A P₁‖_{HS}`, NOT just `‖P₁ M_A Ω‖`),
+  and the partition-function denominator correction `Tr(T'^Nt)/λ₀^Nt`
+  contributes another `O(γ^Nt)` term that doesn't decompose through
+  `connected_two_point_le`. **The bridge takes `C_rem` as a hypothesis**
+  (or, in the concrete pphi2 instance, derives it from the explicit
+  Gaussian kernel's HS norm).
+
+The decomposition into two explicit terms makes the trace/HS proof
+obligation honest rather than hidden in an abstract `C_AB`.
+
+**Why this is `Nt`-uniform after summing**: both decay terms are
+summable.
+- `Σ_{t=0..Nt-1} (γ^t + γ^{Nt - t}) = 2·(1 - γ^Nt)/(1 - γ) ≤ 2/(1 - γ)`,
+  handled by `geom_wrap_sum_le`.
+- `Σ_{t=0..Nt-1} γ^Nt = Nt · γ^Nt → 0` as `Nt → ∞`, bounded uniformly
+  by `sup_{Nt ≥ 1} Nt · γ^Nt = 1/(e · log(1/γ))` (or whatever the
+  exact bound; the point is it's `Nt`-bounded).
+
+The pre-connected raw-comparison form (without the one-point subtraction)
+would be `≤ C · (γ^(Nt - t) + γ^Nt)` for the trace-ratio comparison
+to the vacuum form; the connected form above is strictly cleaner for
+the B2 use because the one-point subtractions cancel the dominant
+`λ₀^Nt · P₀·P₀ / λ₀^Nt = ⟨Ω,M_A Ω⟩·⟨Ω,M_B Ω⟩` term explicitly, leaving
+only the geometric-decay residuals tracked by `C_perp` and `C_rem`.
 
 ### Composition with `connected_two_point_le`
 
@@ -127,15 +151,17 @@ Once the bridge is in place, the pphi2 Layer-B2 use looks like:
 
 ```
 |path-measure connected 2pt at separation t|
-    ≤ C_AB · (γ^t + γ^(Nt - t))                  (finite-periodic bridge)
-    ≤ ‖P₁ (A · Ω)‖_{L²(ν)} · ‖P₁ (B · Ω)‖_{L²(ν)} · (γ^t + γ^(Nt - t))
-                                                  (via connected_two_point_le
-                                                   constants)
+    ≤ C_perp · (γ^t + γ^(Nt - t)) + C_rem · γ^Nt          (finite-periodic bridge)
+    ≤ ‖P₁ (A · Ω)‖ · ‖P₁ (B · Ω)‖ · (γ^t + γ^(Nt - t))   (via connected_two_point_le)
+                                  + C_rem · γ^Nt
 ```
 
-Then `Σ_{t<Nt}` uses `geom_wrap_sum_le` (proved). Each `‖P₁ (A · Ω)‖_{L²(ν)}`
-gets bounded by Piece 1's a-cancellation lemma (`norm_sq_proj_obsTrunc_omega_le`)
-for the bounded-cutoff variant `A = A_{K,t}` in pphi2.
+Then `Σ_{t<Nt}` uses `geom_wrap_sum_le` (proved) on the dominant term,
+and `Σ γ^Nt` on the remainder. Each `‖P₁ (A · Ω)‖_{L²(ν)}` gets bounded
+by Piece 1's a-cancellation lemma (`norm_sq_proj_obsTrunc_omega_le`)
+for the bounded-cutoff variant `A = A_{K,t}` in pphi2. The `C_rem`
+constant in pphi2's concrete instance comes from the Gaussian transfer
+kernel's HS norm (`asymTransferKernel` is L² as a kernel on `ℝ^Ns × ℝ^Ns`).
 
 ## Pieces
 
@@ -210,24 +236,26 @@ theorem pathMeasure_connected_two_point_finite_periodic_bound
     (Ts : TransferSystem S)
     (Ω : S → ℝ) (λ₀ γ : ℝ) (hyps_per_required_additional_hypotheses_above)
     (A B : MultiplicationCLMContract Ts.ν)
+    (hRem : RemainderHypothesis A B Ts Ω λ₀ γ)  -- bounds C_rem; see below
     (Nt : ℕ) [NeZero Nt] (t : ZMod Nt) (ht : 0 < t.val) (htn : t.val < Nt) :
     |∫ A.A(ψ 0) * B.A(ψ t) ∂(Ts.pathMeasure Nt)
         - (∫ A.A(ψ 0) ∂(Ts.pathMeasure Nt)) * (∫ B.A(ψ t) ∂(Ts.pathMeasure Nt))|
-      ≤ ‖vacuumPerp (W⁻¹ ∘ A.M ∘ W) 1‖_{L²(μ_Ω)}
-        * ‖vacuumPerp (W⁻¹ ∘ B.M ∘ W) 1‖_{L²(μ_Ω)}
-        * (γ ^ t.val + γ ^ (Nt - t.val))
+      ≤ ‖vacuumPerp_{L²(ν)} (A.A · Ω)‖ * ‖vacuumPerp_{L²(ν)} (B.A · Ω)‖
+          * (γ ^ t.val + γ ^ (Nt - t.val))         -- one-perp-leg terms (P₀R + RP₀)
+        + hRem.C_rem * γ ^ Nt                       -- doubly-perp R·R + denominator + 1pt corrections
 ```
 
-* Proof structure (per codex):
+* **Proof structure (corrected per codex re-review 2026-06-23):**
   1. `twoPoint_dictionary` → trace-ratio form `(1/Z_n) · ∫∫ A·kPow_{t-1}·B·kPow_{Nt-t-1}`.
-  2. Rank-1 split on **both** kPow factors:
-     `kPow_{m} = λ₀^{m+1} · Ω(x)Ω(y) + R_m(x,y)`, where `R_m` is the kernel of `T'^{m+1}` (T' = T - λ₀·P₀).
-  3. Expand the four product terms: P₀·P₀ (disconnected), P₀·R (one perp leg), R·P₀ (other perp leg), R·R (doubly perp). The P₀·P₀ term cancels with the one-point disconnected subtraction. The remaining three are bounded by op-norm decay of T' on the perp legs:
-     - P₀·R gives factor `γ^(Nt - t)`,
-     - R·P₀ gives factor `γ^t`,
-     - R·R gives factor `γ^Nt` (negligible).
-  4. Normalize by `Z_n ≥ λ₀^n` (positive operator hypothesis).
-  5. Bridge `vacuumPerp_{L²(μ_Ω)} ↔ vacuumPerp_{L²(ν)}` via `W`.
+  2. Rank-1 split on **both** kPow factors: `kPow_{m} = λ₀^{m+1} · Ω(x)Ω(y) + R_m(x,y)`, where `R_m` is the (signed) kernel of `T'^{m+1}` with `T' := T - λ₀·P₀`.
+  3. Expand the four product terms in the trace integral: **P₀·P₀** (disconnected), **P₀·R** (one perp leg, `γ^(Nt-t)` decay), **R·P₀** (other perp leg, `γ^t` decay), **R·R** (doubly perp, `γ^Nt` decay).
+  4. Normalize by `Z_n = λ₀^n + Tr(T'^n) ≥ λ₀^n` (positive operator hypothesis). The denominator's `Tr(T'^n)` correction contributes an additional `O(γ^Nt)` term.
+  5. **One-point subtraction**: the finite-volume one-point `(∫ A dpathMeasure_n)` differs from the GNS one-point `⟨Ω, M_A Ω⟩` by another `O(γ^Nt)` term (the denominator/numerator finite-volume corrections). The connected subtraction cancels the **dominant** `λ₀^Nt · ⟨Ω, M_A Ω⟩ · ⟨Ω, M_B Ω⟩` term but leaves the cross-corrections as part of `C_rem`.
+  6. **The two perp-leg terms** P₀·R and R·P₀ are bounded by op-norm decay of T' on the ground-perp via `connected_two_point_le`-style algebra: each gives `‖P₁ (A · Ω)‖ · ‖P₁ (B · Ω)‖ · γ^{t-or-(Nt-t)}`.
+  7. **The R·R term and the finite-volume one-point corrections** are bundled into `hRem.C_rem`. The doubly-perp R·R term needs trace-class / HS norm control such as `‖P₁ M_A P₁‖_HS · ‖P₁ M_B P₁‖_HS`, NOT just the ground-perp norms `‖P₁ M_A Ω‖`. The bridge takes `C_rem` as a hypothesis; pphi2's concrete instance derives it from the explicit Gaussian-kernel HS norm.
+  8. Bridge `vacuumPerp_{L²(μ_Ω)} ↔ vacuumPerp_{L²(ν)}` via `W` unitary.
+
+The `RemainderHypothesis` abstraction (`C_rem` + the integrability/HS-bound proof obligation) is what an abstract `TransferSystem` user must supply. In pphi2's instance, the Gaussian kernel makes this explicit.
 
 * **Concretely needs**: a kernel-level analog of the rank-1 split (signed-kernel `R_m := kPow_m - λ₀^{m+1} · Ω(x)Ω(y)`) with op-norm decay tracked through L²(ν) integration. The pphi2-side `asymKernelPerp_*` lemmas (still to be written) would be the concrete witness; in RP it's stated abstractly via the `MultiplicationCLMContract` + op-norm-gap inputs.
 

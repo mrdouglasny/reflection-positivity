@@ -16,6 +16,7 @@ import ReflectionPositivity.Graph.FreedmanLovaszSchrijver
 import ReflectionPositivity.AveragedSusceptibility
 import ReflectionPositivity.ConnectedTwoPoint
 
--- GNS / ground-state transform (Piece A of the path-measure ↔ operator
+-- GNS / ground-state transform (Pieces A + B of the path-measure ↔ operator
 -- bridge for pphi2 Layer B2 Piece 2; see docs/gns-construction-plan.md)
 import ReflectionPositivity.GroundMeasure
+import ReflectionPositivity.MultiplicationCLM

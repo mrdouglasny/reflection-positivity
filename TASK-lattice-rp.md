@@ -88,3 +88,25 @@ NO axioms, NO sorries in committed code. `#print axioms` on whatever top-level r
 reflection positivity (GJ 6.2.2) via Hubbard–Stratonovich [+ weak_limit]" (adjust if partial),
 push to origin. Report: deliverables landed, footprints, exact blocker if any, and the precise
 statement of `isReflectionPositive_of_evenNearestNeighbour` as committed.
+
+---
+
+## OUTCOME (2026-07-20) — GJ 6.2.2 RP PROVED, bare trio (modulo one integrability adapter hyp)
+
+Commits `6e80db8` (HS core + structure) + `19a0fb7` (h_square closed). `#print axioms
+isReflectionPositive_of_evenNearestNeighbour = [propext, Classical.choice, Quot.sound]`.
+
+- HS perfect-square core (`hs_edge`, `hs_edges`, `density_hs_factor`): axiom-free (the vet's crux).
+- Doob–Dynkin factorization through `positivePart`: proved internally (not a hypothesis).
+- `Measure.pi`-over-`Sum` block split: proved via `measurePreserving_sumPiEquivProdPi`.
+- `IsReflectionPositive.weak_limit`: landed.
+- Remaining hypothesis: **one `hFubini` integrability side-condition** (the HS-square integrand is
+  integrable on the product measure) — a genuine side-condition, NOT the RP content. Added
+  `measurable_EPos` to the bundle.
+
+**pphi2 adapter (next, lands in pphi2):** instantiate `EvenFerroReflectionData` for
+`interactingLatticeMeasureAsym` (ι = spatial×half-time sites, `EPos` = half-action, `edges/J` =
+the crossing NN bonds `1/a²`, ferromagnetic ✓), discharge `hFubini` from pphi2's Nelson/exp-moment
+integrability, and feed `weak_limit` over the `Lt→∞` pullback to discharge
+`CylinderMeasureSequenceEventuallyReflectionPositive` (`hRP` in `cylinderIso_OS_of_RP_OS2`). Bonus:
+retires pphi2's `gaussian_rp_cov_perfect_square` axiom.

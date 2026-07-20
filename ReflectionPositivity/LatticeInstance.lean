@@ -5,6 +5,8 @@ Authors: Michael R. Douglas
 -/
 import ReflectionPositivity.Abstract
 import Mathlib.Algebra.BigOperators.Group.Finset.Piecewise
+import Mathlib.MeasureTheory.Function.FactorsThrough
+import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 import Mathlib.MeasureTheory.Integral.Pi
 import Mathlib.Probability.Distributions.Gaussian.Real
 
@@ -97,9 +99,37 @@ def evenReflection (ι : Type*) : Sum ι ι ≃ Sum ι ι :=
 def evenTheta (φ : EvenConfig ι) : EvenConfig ι :=
   φ ∘ evenReflection ι
 
+omit [Fintype ι] [DecidableEq ι] in
+@[simp] theorem positivePart_evenTheta (φ : EvenConfig ι) :
+    positivePart (evenTheta φ) = negativePart φ := by
+  ext i
+  rfl
+
+omit [Fintype ι] [DecidableEq ι] in
+@[simp] theorem negativePart_evenTheta (φ : EvenConfig ι) :
+    negativePart (evenTheta φ) = positivePart φ := by
+  ext i
+  rfl
+
 /-- Standard Gaussian product measure for the HS auxiliary field. -/
 def stdGaussianPi (ι : Type*) [Fintype ι] : Measure (ι → ℝ) :=
   Measure.pi (fun _ : ι => ProbabilityTheory.gaussianReal 0 (1 : ℝ≥0))
+
+/-- Product Lebesgue measure on one half of the even lattice. -/
+def halfBaseMeasure (ι : Type*) [Fintype ι] : Measure (ι → ℝ) :=
+  Measure.pi (fun _ : ι => (volume : Measure ℝ))
+
+omit [Fintype ι] [DecidableEq ι] in
+theorem measurable_positivePart : Measurable (positivePart : EvenConfig ι → ι → ℝ) := by
+  rw [measurable_pi_iff]
+  intro i
+  exact measurable_pi_apply (Sum.inl i)
+
+omit [Fintype ι] [DecidableEq ι] in
+theorem measurable_negativePart : Measurable (negativePart : EvenConfig ι → ι → ℝ) := by
+  rw [measurable_pi_iff]
+  intro i
+  exact measurable_pi_apply (Sum.inr i)
 
 /-- Data for the generic even nearest-neighbour ferromagnetic two-block density.
 
@@ -108,6 +138,7 @@ nonnegative couplings `J` on those edges.
 -/
 structure EvenFerroReflectionData (ι : Type*) [Fintype ι] [DecidableEq ι] where
   EPos : (ι → ℝ) → ℝ
+  measurable_EPos : Measurable EPos
   edges : Finset ι
   J : ι → ℝ
   hJ : ∀ i, i ∈ edges → 0 ≤ J i
@@ -133,6 +164,24 @@ def crossingEnergy (a b : ι → ℝ) : ℝ :=
 def density (φ : EvenConfig ι) : ℝ :=
   Real.exp (-d.EPos (positivePart φ) - d.EPos (negativePart φ) +
     d.crossingEnergy (positivePart φ) (negativePart φ))
+
+theorem density_nonneg (φ : EvenConfig ι) : 0 ≤ d.density φ := by
+  exact (Real.exp_pos _).le
+
+theorem measurable_crossingEnergy :
+    Measurable (fun φ : EvenConfig ι =>
+      d.crossingEnergy (positivePart φ) (negativePart φ)) := by
+  unfold crossingEnergy
+  exact Finset.measurable_sum d.edges fun i _ =>
+    ((measurable_const.mul (measurable_pi_apply (Sum.inl i))).mul
+      (measurable_pi_apply (Sum.inr i)))
+
+theorem measurable_density : Measurable d.density := by
+  have hpos : Measurable (fun φ : EvenConfig ι => d.EPos (positivePart φ)) :=
+    d.measurable_EPos.comp measurable_positivePart
+  have hneg : Measurable (fun φ : EvenConfig ι => d.EPos (negativePart φ)) :=
+    d.measurable_EPos.comp measurable_negativePart
+  exact measurable_exp.comp ((hpos.neg.sub hneg).add d.measurable_crossingEnergy)
 
 /-- The corresponding unnormalised Gibbs measure. -/
 def μ : Measure (EvenConfig ι) :=
@@ -164,6 +213,17 @@ def posPartIntegrand (a : ι → ℝ) (z : ι → ℝ) : ℝ :=
   Real.exp (-d.EPos a) * ∏ i, hsHalfFactor d.edges d.J i a (z i)
 
 end EvenFerroReflectionData
+
+/-- The HS/Fubini integrand whose absolute integrability justifies the final swap. -/
+def hsSquareIntegrand (d : EvenFerroReflectionData ι) (G : (ι → ℝ) → ℝ) :
+    ((ι → ℝ) × (ι → ℝ)) × (ι → ℝ) → ℝ :=
+  fun x =>
+    (G x.1.1 * d.posPartIntegrand x.1.1 x.2) *
+      (G x.1.2 * d.posPartIntegrand x.1.2 x.2)
+
+/-- The one-half HS integral whose square appears in the reflection form. -/
+def hsSquareI (d : EvenFerroReflectionData ι) (G : (ι → ℝ) → ℝ) (z : ι → ℝ) : ℝ :=
+  ∫ a : ι → ℝ, G a * d.posPartIntegrand a z ∂(halfBaseMeasure ι)
 
 /-- Per-edge Hubbard--Stratonovich identity in the self-term form.
 
@@ -293,23 +353,215 @@ theorem density_hs_factor (d : EvenFerroReflectionData ι) (φ : EvenConfig ι) 
   rw [← hs_edges d a b]
   rw [← Real.exp_add]
 
-/-- Reflection positivity from the square representation produced by the HS/block split.
+/-- The HS/block/Fubini square representation for observables that factor through the
+positive-half projection.
 
-The remaining measure-theoretic assembly for the full GJ 6.2.2 theorem is exactly the
-`h_square` hypothesis: for every positive-half observable, the reflection form must
-be rewritten as an integral of a pointwise square over the HS Gaussian field.
+The single explicit side condition is the absolute integrability needed by Bochner Fubini for the
+signed triple integral. The subsequent theorem obtains the factorization `F = G ∘ positivePart`
+from `Measurable[d.mPos] F` by Doob-Dynkin.
+-/
+theorem reflectionInnerProduct_eq_hsSquare_of_factorization (d : EvenFerroReflectionData ι)
+    {F : EvenConfig ι → ℝ} {G : (ι → ℝ) → ℝ}
+    (hFG : F = G ∘ positivePart)
+    (hFubini : Integrable (hsSquareIntegrand d G)
+      (((halfBaseMeasure ι).prod (halfBaseMeasure ι)).prod (stdGaussianPi ι))) :
+    reflectionInnerProduct d.μ d.θ F F =
+      ∫ z : ι → ℝ, (hsSquareI d G z) ^ 2 ∂(stdGaussianPi ι) := by
+  let ν : Measure (ι → ℝ) := halfBaseMeasure ι
+  let γ : Measure (ι → ℝ) := stdGaussianPi ι
+  let pairν : Measure ((ι → ℝ) × (ι → ℝ)) := ν.prod ν
+  let e : EvenConfig ι ≃ᵐ ((ι → ℝ) × (ι → ℝ)) :=
+    MeasurableEquiv.sumPiEquivProdPi (fun _ : Sum ι ι => ℝ)
+  haveI : SFinite ν := by
+    dsimp [ν, halfBaseMeasure]
+    infer_instance
+  haveI : SFinite γ := by
+    dsimp [γ, stdGaussianPi]
+    infer_instance
+  haveI : SFinite pairν := by
+    dsimp [pairν]
+    infer_instance
+  have hdensMeas : Measurable (fun φ : EvenConfig ι => ENNReal.ofReal (d.density φ)) :=
+    ENNReal.measurable_ofReal.comp d.measurable_density
+  have hdensTop : ∀ᵐ φ ∂d.baseMeasure, ENNReal.ofReal (d.density φ) < ∞ := by
+    simp
+  have hwithDensity :
+      (∫ φ : EvenConfig ι, F φ * F (d.θ φ) ∂d.μ)
+        =
+          ∫ φ : EvenConfig ι, d.density φ * (F φ * F (d.θ φ)) ∂d.baseMeasure := by
+    rw [EvenFerroReflectionData.μ]
+    rw [integral_withDensity_eq_integral_toReal_smul hdensMeas hdensTop]
+    refine integral_congr_ae (Filter.Eventually.of_forall fun φ => ?_)
+    change (ENNReal.ofReal (d.density φ)).toReal * (F φ * F (d.θ φ))
+      = d.density φ * (F φ * F (d.θ φ))
+    rw [ENNReal.toReal_ofReal (d.density_nonneg φ)]
+  have hFG_apply : ∀ φ : EvenConfig ι, F φ = G (positivePart φ) := by
+    intro φ
+    rw [hFG]
+    rfl
+  have hFG_theta : ∀ φ : EvenConfig ι, F (d.θ φ) = G (negativePart φ) := by
+    intro φ
+    rw [hFG]
+    simp [EvenFerroReflectionData.θ]
+  have hsplit :
+      MeasurePreserving e d.baseMeasure pairν := by
+    simpa [e, pairν, ν, halfBaseMeasure, EvenFerroReflectionData.baseMeasure] using
+      (measurePreserving_sumPiEquivProdPi
+        (fun _ : Sum ι ι => (volume : Measure ℝ)) :
+          MeasurePreserving
+            (MeasurableEquiv.sumPiEquivProdPi (fun _ : Sum ι ι => ℝ))
+            (Measure.pi (fun _ : Sum ι ι => (volume : Measure ℝ)))
+            ((Measure.pi (fun _ : ι => (volume : Measure ℝ))).prod
+              (Measure.pi (fun _ : ι => (volume : Measure ℝ)))))
+  let Hpair : ((ι → ℝ) × (ι → ℝ)) → ℝ := fun p =>
+    (G p.1 * G p.2) *
+      ∫ z : ι → ℝ, d.posPartIntegrand p.1 z * d.posPartIntegrand p.2 z ∂γ
+  have hblock :
+      (∫ φ : EvenConfig ι,
+        (G (positivePart φ) * G (negativePart φ)) *
+          (∫ z : ι → ℝ,
+            d.posPartIntegrand (positivePart φ) z *
+              d.posPartIntegrand (negativePart φ) z ∂γ) ∂d.baseMeasure)
+        = ∫ p : (ι → ℝ) × (ι → ℝ), Hpair p ∂pairν := by
+    have hcomp :
+        (fun φ : EvenConfig ι =>
+          (G (positivePart φ) * G (negativePart φ)) *
+            (∫ z : ι → ℝ,
+              d.posPartIntegrand (positivePart φ) z *
+                d.posPartIntegrand (negativePart φ) z ∂γ))
+          =
+            fun φ : EvenConfig ι => Hpair (e φ) := by
+      funext φ
+      change
+        G (fun i : ι => φ (Sum.inl i)) * G (fun i : ι => φ (Sum.inr i)) *
+            (∫ z : ι → ℝ,
+              d.posPartIntegrand (fun i : ι => φ (Sum.inl i)) z *
+                d.posPartIntegrand (fun i : ι => φ (Sum.inr i)) z ∂γ)
+          =
+            G (fun i : ι => φ (Sum.inl i)) * G (fun i : ι => φ (Sum.inr i)) *
+              (∫ z : ι → ℝ,
+                d.posPartIntegrand (fun i : ι => φ (Sum.inl i)) z *
+                  d.posPartIntegrand (fun i : ι => φ (Sum.inr i)) z ∂γ)
+      rfl
+    rw [hcomp]
+    exact hsplit.integral_comp' Hpair
+  have hconstIntoIntegral :
+      (∫ p : (ι → ℝ) × (ι → ℝ), Hpair p ∂pairν)
+        =
+          ∫ p : (ι → ℝ) × (ι → ℝ),
+            ∫ z : ι → ℝ,
+              (G p.1 * d.posPartIntegrand p.1 z) *
+                (G p.2 * d.posPartIntegrand p.2 z) ∂γ ∂pairν := by
+    refine integral_congr_ae (Filter.Eventually.of_forall fun p => ?_)
+    dsimp [Hpair]
+    rw [← integral_const_mul (G p.1 * G p.2)
+      (fun z : ι → ℝ => d.posPartIntegrand p.1 z * d.posPartIntegrand p.2 z)]
+    refine integral_congr_ae (Filter.Eventually.of_forall fun z => ?_)
+    ring
+  have hswap :
+      (∫ p : (ι → ℝ) × (ι → ℝ),
+        ∫ z : ι → ℝ,
+          (G p.1 * d.posPartIntegrand p.1 z) *
+            (G p.2 * d.posPartIntegrand p.2 z) ∂γ ∂pairν)
+        =
+          ∫ z : ι → ℝ,
+            ∫ p : (ι → ℝ) × (ι → ℝ),
+              (G p.1 * d.posPartIntegrand p.1 z) *
+                (G p.2 * d.posPartIntegrand p.2 z) ∂pairν ∂γ := by
+    exact integral_integral_swap
+      (μ := pairν) (ν := γ)
+      (f := fun p z =>
+        (G p.1 * d.posPartIntegrand p.1 z) *
+          (G p.2 * d.posPartIntegrand p.2 z))
+      (by simpa [hsSquareIntegrand, pairν, ν, γ] using hFubini)
+  have hfactor : ∀ z : ι → ℝ,
+      (∫ p : (ι → ℝ) × (ι → ℝ),
+        (G p.1 * d.posPartIntegrand p.1 z) *
+          (G p.2 * d.posPartIntegrand p.2 z) ∂pairν)
+        =
+          (∫ a : ι → ℝ, G a * d.posPartIntegrand a z ∂ν) *
+            (∫ b : ι → ℝ, G b * d.posPartIntegrand b z ∂ν) := by
+    intro z
+    simpa [pairν] using
+      (integral_prod_mul (μ := ν) (ν := ν)
+        (fun a : ι → ℝ => G a * d.posPartIntegrand a z)
+        (fun b : ι → ℝ => G b * d.posPartIntegrand b z))
+  calc
+    reflectionInnerProduct d.μ d.θ F F
+        = ∫ φ : EvenConfig ι, F φ * F (d.θ φ) ∂d.μ := rfl
+    _ = ∫ φ : EvenConfig ι, d.density φ * (F φ * F (d.θ φ)) ∂d.baseMeasure :=
+      hwithDensity
+    _ = ∫ φ : EvenConfig ι,
+          (G (positivePart φ) * G (negativePart φ)) * d.density φ ∂d.baseMeasure := by
+      refine integral_congr_ae (Filter.Eventually.of_forall fun φ => ?_)
+      change d.density φ * (F φ * F (d.θ φ)) =
+        (G (positivePart φ) * G (negativePart φ)) * d.density φ
+      rw [hFG_apply φ, hFG_theta φ]
+      ring
+    _ = ∫ φ : EvenConfig ι,
+          (G (positivePart φ) * G (negativePart φ)) *
+            (∫ z : ι → ℝ,
+              d.posPartIntegrand (positivePart φ) z *
+                d.posPartIntegrand (negativePart φ) z ∂γ) ∂d.baseMeasure := by
+      refine integral_congr_ae (Filter.Eventually.of_forall fun φ => ?_)
+      change (G (positivePart φ) * G (negativePart φ)) * d.density φ =
+        (G (positivePart φ) * G (negativePart φ)) *
+          (∫ z : ι → ℝ,
+            d.posPartIntegrand (positivePart φ) z *
+              d.posPartIntegrand (negativePart φ) z ∂γ)
+      rw [density_hs_factor d φ]
+    _ = ∫ p : (ι → ℝ) × (ι → ℝ), Hpair p ∂pairν := hblock
+    _ = ∫ p : (ι → ℝ) × (ι → ℝ),
+          ∫ z : ι → ℝ,
+            (G p.1 * d.posPartIntegrand p.1 z) *
+              (G p.2 * d.posPartIntegrand p.2 z) ∂γ ∂pairν := hconstIntoIntegral
+    _ = ∫ z : ι → ℝ,
+          ∫ p : (ι → ℝ) × (ι → ℝ),
+            (G p.1 * d.posPartIntegrand p.1 z) *
+              (G p.2 * d.posPartIntegrand p.2 z) ∂pairν ∂γ := hswap
+    _ = ∫ z : ι → ℝ,
+          (hsSquareI d G z) * (hsSquareI d G z) ∂γ := by
+      refine integral_congr_ae (Filter.Eventually.of_forall fun z => ?_)
+      change
+        (∫ p : (ι → ℝ) × (ι → ℝ),
+          (G p.1 * d.posPartIntegrand p.1 z) *
+            (G p.2 * d.posPartIntegrand p.2 z) ∂pairν)
+          = hsSquareI d G z * hsSquareI d G z
+      rw [hfactor z]
+      simp [hsSquareI, ν]
+    _ = ∫ z : ι → ℝ, (hsSquareI d G z) ^ 2 ∂γ := by
+      refine integral_congr_ae (Filter.Eventually.of_forall fun z => ?_)
+      ring
+    _ = ∫ z : ι → ℝ, (hsSquareI d G z) ^ 2 ∂(stdGaussianPi ι) := rfl
+
+/-- Reflection positivity for the even nearest-neighbour ferromagnetic two-block measure.
+
+The old `h_square` assumption is replaced by the concrete HS square proof above. The remaining
+explicit hypothesis is only the Bochner-Fubini integrability condition for the factorized
+observable supplied by Doob-Dynkin.
 -/
 theorem isReflectionPositive_of_evenNearestNeighbour (d : EvenFerroReflectionData ι)
-    (h_square : ∀ F : EvenConfig ι → ℝ, Measurable[d.mPos] F →
-      Integrable (fun x => F x * F (d.θ x)) d.μ →
-        ∃ I : (ι → ℝ) → ℝ,
-          reflectionInnerProduct d.μ d.θ F F =
-            ∫ z : ι → ℝ, (I z) ^ 2 ∂stdGaussianPi ι) :
+    (hFubini : ∀ G : (ι → ℝ) → ℝ, Measurable G →
+      Integrable (fun φ : EvenConfig ι =>
+        G (positivePart φ) * G (negativePart φ)) d.μ →
+      Integrable (hsSquareIntegrand d G)
+        (((halfBaseMeasure ι).prod (halfBaseMeasure ι)).prod (stdGaussianPi ι))) :
     IsReflectionPositive d.μ d.θ d.mPos := by
   intro F hF hInt
-  rcases h_square F hF hInt with ⟨I, hI⟩
-  rw [hI]
-  exact integral_nonneg fun z => sq_nonneg (I z)
+  have hF' :
+      Measurable[(inferInstance : MeasurableSpace (ι → ℝ)).comap positivePart] F := by
+    simpa [EvenFerroReflectionData.mPos] using hF
+  rcases hF'.exists_eq_measurable_comp (f := positivePart) with ⟨G, hG, hFG⟩
+  have hIntG :
+      Integrable (fun φ : EvenConfig ι =>
+        G (positivePart φ) * G (negativePart φ)) d.μ := by
+    refine hInt.congr (Filter.Eventually.of_forall fun φ => ?_)
+    rw [hFG]
+    simp [EvenFerroReflectionData.θ]
+  have hSquare := reflectionInnerProduct_eq_hsSquare_of_factorization
+    d (F := F) (G := G) hFG (hFubini G hG hIntG)
+  rw [hSquare]
+  exact integral_nonneg fun z => sq_nonneg (hsSquareI d G z)
 
 /-- Reflection positivity is closed under convergence of the reflection forms.
 

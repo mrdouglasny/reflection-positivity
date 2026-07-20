@@ -84,3 +84,42 @@ Deliverable 3 is the crux: cheap if it stays a vetted axiom (drop-in, days), a r
 sub-project if proved (Hubbard–Stratonovich in Lean). Recommend: land 1,2,4,5 with 3 as a stated
 axiom first (immediately discharges `hRP` modulo one vetted generic axiom), then attack 3's proof
 separately. That gets cylinder OS3 unconditional-modulo-one-axiom fast.
+
+---
+
+## VET OUTCOME (Gemini 3.1-pro, 2026-07-20) — Route A, and the hard core is AXIOM-FREE
+
+**Route A chosen.** Route B is an "illusion of reuse": defining the Feynman–Kac vector `Φ_F`
+for *arbitrary* positive-half `F` forces the same μ₊/μ₋ split + crossing isolation as Route A,
+just with added functional-analytic overhead. Route A stays in measure theory (Lean-friendly).
+
+**Deliverable 3 is PROVABLE — drop the axiom.** Use **per-edge Hubbard–Stratonovich**, NOT
+Taylor series, NOT a PD-matrix axiom, NOT multivariate Gaussian identities:
+- The crossing sum factors over boundary edges:
+  `exp(Σ_{x∈∂Λ₊} J_x φ_x φ_{rx}) = ∏_x exp(J_x φ_x φ_{rx})`.
+- 1D HS per edge (`J ≥ 0`):
+  `exp(J φ ψ) = (2π)^{-1/2} ∫_ℝ exp(√J z φ)·exp(√J z ψ)·exp(−z²/2) dz`
+  (this is just the 1D Gaussian MGF `∫ exp(√J z (φ+ψ)) dN₀(z) = exp(J(φ+ψ)²/2)` split via
+  `(φ+ψ)² = φ² + ψ² + 2φψ`, the `φ²/ψ²` absorbing into the halves — a clean elementary identity).
+- Introduces an auxiliary standard Gaussian `dN₀(z)` on `ℝ^{|∂Λ₊|}`; by Fubini the full integral
+  becomes `∫ dN₀(z) · [∫ F(φ₊) e^{Σ√J z_x φ_x} dμ₊] · [∫ (θF)(φ₋) e^{Σ√J z_x φ_{rx}} dμ₋]`.
+- By θ-symmetry (μ₊ ≅ μ₋ under `r`) the second bracket = the first, so the integrand is
+  `|I(z)|² ≥ 0`, hence `∫ dN₀(z) |I(z)|² ≥ 0`. **No axioms; only Fubini + the 1D Gaussian MGF.**
+
+**Decomposition confirmed flawless:** (a) NN interaction ⟹ the halves strictly factorize modulo
+the single crossing-bond layer (the self-terms `e^{−½J φ²}` belong to their own half); (b) the
+"plane between sites / reflect across bonds" (Nt even) condition is exactly what yields the clean
+`e^{J φ_x φ_{rx}}` coupling — reflecting *through* sites would instead give a `δ(φ_x − φ_{rx})`
+coupling needing a different representation, which this setup avoids; (c) `Σ V(φ_x)` is
+θ-invariant with **no parity condition on V** (r permutes site labels) — confirming Simon's
+generality (parity is only for the internal Z₂ symmetry, not spatial RP).
+
+## Revised staging (post-vet)
+
+The theorem is a fully axiom-free target. Deliverables 1,2,4,5 generic-mechanical; deliverable 3
+is the HS perfect-square (elementary, ~Fubini + 1D Gaussian MGF + `|·|² ≥ 0`). Downstream bonus:
+the pphi2 adapter then **retires pphi2's `gaussian_rp_cov_perfect_square` private axiom** (the
+square side's N-specific version of exactly this) in addition to discharging `hRP`. So this one
+theorem: (i) makes cylinder OS3 unconditional (modulo the CYL-1a exp-moment axiom + hOS2 wiring),
+and (ii) removes a standing pphi2 axiom. Ready to dispatch (agent/Codex) — the HS identity + the
+half-factorization are the two chunks; both are stated sharply above.

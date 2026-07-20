@@ -12,6 +12,13 @@ Product Gibbs measures with even ferromagnetic nearest-neighbour
 interactions are reflection-positive for the half-space sub-σ-algebra
 under any lattice reflection that preserves the bond structure.
 
+## Design & route (2026-07-20)
+
+Full pinned design + proof skeleton: `docs/lattice-rp-design.md` (Gemini-vetted). **Route A**
+(measure-theoretic, not the transfer-operator route). The crossing perfect-square core is
+**axiom-free** via per-edge Hubbard–Stratonovich (Fubini + 1D Gaussian MGF); landing this
+retires pphi2's `gaussian_rp_cov_perfect_square` axiom and discharges pphi2 cylinder OS3 `hRP`.
+
 ## Main theorems (planned)
 
 * `MeasureTheory.Measure.isReflectionPositive_of_evenNearestNeighbour` —

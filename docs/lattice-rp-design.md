@@ -123,3 +123,15 @@ square side's N-specific version of exactly this) in addition to discharging `hR
 theorem: (i) makes cylinder OS3 unconditional (modulo the CYL-1a exp-moment axiom + hOS2 wiring),
 and (ii) removes a standing pphi2 axiom. Ready to dispatch (agent/Codex) — the HS identity + the
 half-factorization are the two chunks; both are stated sharply above.
+
+---
+
+## pphi2 application validated (2026-07-20)
+
+The `ι⊕ι` (no-fixed-site) theorem is the RIGHT one for pphi2's cylinder OS3 — via the
+**link-reflection `t ↦ −t−1`** (reflection through bonds), which on the even torus has zero fixed
+sites and splits into `ι⊕ι` with two crossing bonds, so this theorem applies verbatim (Gemini-
+vetted; the through-site `t↦−t` two-fixed-plane case is avoided, and the one-spacing shift vanishes
+as `a→0`). Full pphi2 adapter plan: `pphi2/planning/cylinder-rp-adapter-design.md`. The
+density↔covariance bridge it needs is `GaussianField/DensityAsym.lean`
+(`latticeGaussianFieldLawAsym_eq_normalizedQuadraticGaussianMeasure`).
